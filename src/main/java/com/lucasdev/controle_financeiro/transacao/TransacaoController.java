@@ -21,8 +21,25 @@ public class TransacaoController {
     public Transacao criar(@RequestBody Transacao transacao) {
         return service.criar(transacao);
  }
+
     @GetMapping
     public List<Transacao> listar(){
         return service.listarTodas();
+    }
+
+    @GetMapping("/{id}")
+    public Transacao buscar(@PathVariable Long id){
+        return service.buscaporId(id);
+    }
+
+    @PutMapping("/{id}")
+    public Transacao atualizar(@PathVariable Long id, @RequestBody Transacao dados){
+        return service.atualizar(id,dados);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void excluir (@PathVariable Long id){
+        service.excluir(id);
     }
 }
