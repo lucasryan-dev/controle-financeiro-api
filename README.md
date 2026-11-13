@@ -111,7 +111,7 @@ A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro client
 
 - [x] Entidade `Transacao` com persistência via JPA
 - [x] Cadastrar e listar transações
-- [ ] Buscar, atualizar e excluir transações (CRUD completo)
+- [x] Buscar, atualizar e excluir transações (CRUD completo)
 - [ ] DTOs e validação dos dados de entrada
 - [ ] Tratamento de erros padronizado
 - [ ] Categorias como entidade (relacionamento entre tabelas)
@@ -127,4 +127,4 @@ A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro client
 
 **Lucas Ryan**
 
-[![LinkedIn](www.linkedin.com/in/lucas-ryan-33848524b)
+
