@@ -27,10 +27,17 @@ Requisição HTTP (JSON)
   Service     → regras de negócio e conversão entre DTO e entidade
       ↓
  Repository   → acesso ao banco de dados
+
+ GlobalExceptionHandler → intercepta as exceções de todos os controllers
+                          e devolve respostas de erro padronizadas
 ```
 
 ```
 src/main/java/com/lucasdev/controle_financeiro/
+├── exception/
+│   ├── ErroResponse.java                    # formato padrão das respostas de erro
+│   ├── RecursoNaoEncontradoException.java   # exceção de recurso inexistente (404)
+│   └── GlobalExceptionHandler.java          # tratamento global de erros
 └── transacao/
     ├── Transacao.java              # entidade JPA
     ├── TipoTransacao.java          # enum: RECEITA, DESPESA
@@ -50,7 +57,9 @@ src/main/java/com/lucasdev/controle_financeiro/
 - **Injeção de dependência pelo construtor**: deixa as dependências explícitas e facilita os testes.
 - **DTOs com `record`**: a API recebe `TransacaoRequest` e devolve `TransacaoResponse`, sem expor a entidade JPA. O cliente não consegue enviar o `id`, e mudanças na entidade não alteram o contrato da API.
 - **Validação com Bean Validation**: dados inválidos são recusados com `400 Bad Request` antes de chegar ao banco.
-- **Status HTTP semânticos**: `201` ao criar, `204` ao excluir e `404` quando a transação não existe.
+- **Status HTTP semânticos**: `201` ao criar, `204` ao excluir, `400` para dados inválidos e `404` quando a transação não existe.
+- **Tratamento global de erros com `@RestControllerAdvice`**: todos os erros saem no mesmo formato JSON. Erros inesperados são registrados no log, e o cliente recebe só uma mensagem genérica, sem expor detalhes internos como stack trace ou SQL.
+- **Exceções de domínio**: a camada de serviço lança `RecursoNaoEncontradoException` e não conhece nada de HTTP. Quem traduz a exceção para `404` é o tratador global.
 
 ## 📌 Endpoints
 
@@ -103,6 +112,53 @@ Content-Type: application/json
 
 Requisições que não seguem essas regras recebem `400 Bad Request`.
 
+### Respostas de erro
+
+Todos os erros seguem o mesmo formato:
+
+**Dados inválidos** `400 Bad Request`
+```json
+{
+  "status": 400,
+  "mensagem": "Dados inválidos",
+  "campos": {
+    "valor": "O valor deve ser maior que zero",
+    "data": "A data é obrigatória"
+  },
+  "timestamp": "2026-11-15T16:55:12.345"
+}
+```
+
+**JSON malformado ou valor de enum inexistente** `400 Bad Request`
+```json
+{
+  "status": 400,
+  "mensagem": "JSON inválido ou com valores não aceitos",
+  "campos": null,
+  "timestamp": "2026-11-15T16:56:03.120"
+}
+```
+
+**Transação não encontrada** `404 Not Found`
+```json
+{
+  "status": 404,
+  "mensagem": "Transação não encontrada",
+  "campos": null,
+  "timestamp": "2026-11-15T16:56:40.871"
+}
+```
+
+**Erro inesperado** `500 Internal Server Error`
+```json
+{
+  "status": 500,
+  "mensagem": "Erro interno no servidor",
+  "campos": null,
+  "timestamp": "2026-11-15T16:57:18.004"
+}
+```
+
 ## ▶️ Como rodar
 
 **Pré-requisitos:** Java 21+ e Git. O Maven não precisa estar instalado, porque o projeto usa o Maven Wrapper.
@@ -129,7 +185,7 @@ A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro client
 - [x] Cadastrar e listar transações
 - [x] Buscar, atualizar e excluir transações (CRUD completo)
 - [x] DTOs e validação dos dados de entrada
-- [ ] Tratamento de erros padronizado
+- [x] Tratamento de erros padronizado
 - [ ] Categorias como entidade (relacionamento entre tabelas)
 - [ ] Relatórios: saldo do mês e gastos por categoria
 - [ ] Filtros por período, tipo e categoria, com paginação
