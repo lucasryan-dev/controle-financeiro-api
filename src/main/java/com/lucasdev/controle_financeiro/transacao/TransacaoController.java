@@ -1,5 +1,6 @@
 package com.lucasdev.controle_financeiro.transacao;
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,22 +19,22 @@ public class TransacaoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Transacao criar(@RequestBody Transacao transacao) {
-        return service.criar(transacao);
+    public TransacaoResponse criar(@Valid @RequestBody TransacaoRequest request) {
+        return service.criar(request);
  }
 
     @GetMapping
-    public List<Transacao> listar(){
+    public List<TransacaoResponse> listar(){
         return service.listarTodas();
     }
 
     @GetMapping("/{id}")
-    public Transacao buscar(@PathVariable Long id){
-        return service.buscaporId(id);
+    public TransacaoResponse buscar(@PathVariable Long id){
+        return service.buscar(id);
     }
 
     @PutMapping("/{id}")
-    public Transacao atualizar(@PathVariable Long id, @RequestBody Transacao dados){
+    public TransacaoResponse atualizar(@PathVariable Long id, @Valid @RequestBody TransacaoRequest dados){
         return service.atualizar(id,dados);
     }
 

@@ -15,30 +15,38 @@ public class TransacaoService {
         this.repository = repository;
     }
 
-    public Transacao criar(Transacao transacao){
-        return repository.save(transacao);
+    public TransacaoResponse criar(TransacaoRequest request){
+        Transacao salva = repository.save(request.toEntity());
+        return TransacaoResponse.from(salva);
     }
 
-    public List<Transacao> listarTodas(){
-        return repository.findAll();
+    public List<TransacaoResponse> listarTodas(){
+        return repository.findAll()
+                .stream()
+                .map(TransacaoResponse::from)
+                .toList();
     }
 
-    public Transacao buscaporId(Long id){
+    public TransacaoResponse buscar(Long id){
+        return TransacaoResponse.from(buscaporId(id));
+    }
+
+    private Transacao buscaporId(Long id){
         return repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Transação não encontrada"));
     }
 
-    public Transacao atualizar (Long id, Transacao dados){
+    public TransacaoResponse atualizar (Long id, TransacaoRequest dados){
         Transacao existente = buscaporId(id);
 
-        existente.setDescricao(dados.getDescricao());
-        existente.setValor(dados.getValor());
-        existente.setTipo(dados.getTipo());
-        existente.setCategoria(dados.getCategoria());
-        existente.setData(dados.getData());
+        existente.setDescricao(dados.descricao());
+        existente.setValor(dados.valor());
+        existente.setTipo(dados.tipo());
+        existente.setCategoria(dados.categoria());
+        existente.setData(dados.data());
 
-        return repository.save(existente);
+        return TransacaoResponse.from(repository.save(existente));
     }
 
     public void excluir(Long id){
