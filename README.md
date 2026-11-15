@@ -198,6 +198,6 @@ A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro client
 ## 👤 Autor
 
 **Lucas Ryan**
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/SEU_USUARIO)
+)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lucas-ryan-33848524b/)
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/lucasryan-dev)
