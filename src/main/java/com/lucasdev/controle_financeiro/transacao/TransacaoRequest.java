@@ -11,7 +11,7 @@ public record TransacaoRequest(
         String descricao,
 
         @NotNull(message = "o valor é Obrigatório")
-        @Positive(message = "O valor deve ser m,aior que zero")
+        @Positive(message = "O valor deve ser maior que zero")
         @Digits(integer = 10, fraction = 2, message = "O valor deve ter no maximo duas casas decimais")
         BigDecimal valor,
 

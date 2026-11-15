@@ -1,9 +1,7 @@
 package com.lucasdev.controle_financeiro.transacao;
 
-import jakarta.persistence.Id;
-import org.springframework.http.HttpStatus;
+import com.lucasdev.controle_financeiro.exception.RecursoNaoEncontradoException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -33,8 +31,7 @@ public class TransacaoService {
 
     private Transacao buscaporId(Long id){
         return repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Transação não encontrada"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Transação não encontrada"));
     }
 
     public TransacaoResponse atualizar (Long id, TransacaoRequest dados){
