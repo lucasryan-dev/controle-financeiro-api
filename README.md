@@ -2,7 +2,7 @@
 
 API REST para controle de finanças pessoais, desenvolvida com **Java e Spring Boot**. Com ela você registra receitas e despesas, acompanha o saldo e, nas próximas versões, recebe **dicas para melhorar sua saúde financeira** a partir dos seus gastos.
 
-> 🚧 **Projeto em desenvolvimento.** Estou construindo esta API em etapas para estudar e praticar desenvolvimento back-end. Acompanhe a evolução no [roadmap](#-roadmap) e no histórico de commits.
+> 🚧 **Projeto em desenvolvimento.** Estou construindo esta API em etapas para estudar e praticar desenvolvimento back-end. Acompanhe a evolução no [roadmap](#️-roadmap) e no histórico de commits.
 
 ## 🛠️ Tecnologias
 
@@ -20,11 +20,11 @@ API REST para controle de finanças pessoais, desenvolvida com **Java e Spring B
 O projeto segue a arquitetura em camadas, organizado por funcionalidade:
 
 ```
-Requisição HTTP
+Requisição HTTP (JSON)
       ↓
- Controller   → recebe a requisição e devolve a resposta
+ Controller   → recebe a requisição, valida o DTO e devolve a resposta
       ↓
-  Service     → regras de negócio
+  Service     → regras de negócio e conversão entre DTO e entidade
       ↓
  Repository   → acesso ao banco de dados
 ```
@@ -35,6 +35,8 @@ src/main/java/com/lucasdev/controle_financeiro/
     ├── Transacao.java              # entidade JPA
     ├── TipoTransacao.java          # enum: RECEITA, DESPESA
     ├── Categoria.java              # enum: ALIMENTACAO, TRANSPORTE...
+    ├── TransacaoRequest.java       # DTO de entrada, com validações
+    ├── TransacaoResponse.java      # DTO de saída
     ├── TransacaoRepository.java    # acesso ao banco
     ├── TransacaoService.java       # regras de negócio
     └── TransacaoController.java    # endpoints REST
@@ -43,16 +45,22 @@ src/main/java/com/lucasdev/controle_financeiro/
 ### Decisões técnicas
 
 - **`BigDecimal` para valores monetários**: evita os erros de arredondamento do `double` (ex.: `0.1 + 0.2 = 0.30000000000000004`).
-- **Receitas e despesas na mesma entidade**: diferenciadas pelo campo `tipo`, o que simplifica o cálculo do saldo.
+- **Receitas e despesas na mesma entidade**: diferenciadas pelo campo `tipo`, o que simplifica o cálculo do saldo. O valor é sempre positivo; o `tipo` define se ele soma ou subtrai.
 - **Enums salvos como texto** (`EnumType.STRING`): os dados continuam corretos mesmo se a ordem dos valores do enum mudar.
 - **Injeção de dependência pelo construtor**: deixa as dependências explícitas e facilita os testes.
+- **DTOs com `record`**: a API recebe `TransacaoRequest` e devolve `TransacaoResponse`, sem expor a entidade JPA. O cliente não consegue enviar o `id`, e mudanças na entidade não alteram o contrato da API.
+- **Validação com Bean Validation**: dados inválidos são recusados com `400 Bad Request` antes de chegar ao banco.
+- **Status HTTP semânticos**: `201` ao criar, `204` ao excluir e `404` quando a transação não existe.
 
 ## 📌 Endpoints
 
-| Método | Endpoint | Descrição | Status |
-|---|---|---|---|
-| `POST` | `/transacoes` | Cadastra uma transação | `201 Created` |
-| `GET` | `/transacoes` | Lista todas as transações | `200 OK` |
+| Método | Endpoint | Descrição | Sucesso | Erros |
+|---|---|---|---|---|
+| `POST` | `/transacoes` | Cadastra uma transação | `201 Created` | `400` |
+| `GET` | `/transacoes` | Lista todas as transações | `200 OK` | |
+| `GET` | `/transacoes/{id}` | Busca uma transação pelo id | `200 OK` | `404` |
+| `PUT` | `/transacoes/{id}` | Atualiza uma transação | `200 OK` | `400`, `404` |
+| `DELETE` | `/transacoes/{id}` | Exclui uma transação | `204 No Content` | `404` |
 
 ### Exemplo: cadastrar uma transação
 
@@ -83,9 +91,17 @@ Content-Type: application/json
 }
 ```
 
-**Valores aceitos**
-- `tipo`: `RECEITA`, `DESPESA`
-- `categoria`: `ALIMENTACAO`, `TRANSPORTE`, `MORADIA`, `SAUDE`, `EDUCACAO`, `LAZER`, `SALARIO`, `OUTROS`
+### Regras de validação
+
+| Campo | Regras |
+|---|---|
+| `descricao` | obrigatória, até 100 caracteres |
+| `valor` | obrigatório, maior que zero, no máximo 2 casas decimais |
+| `tipo` | obrigatório: `RECEITA` ou `DESPESA` |
+| `categoria` | obrigatória: `ALIMENTACAO`, `TRANSPORTE`, `MORADIA`, `SAUDE`, `EDUCACAO`, `LAZER`, `SALARIO` ou `OUTROS` |
+| `data` | obrigatória, no formato `AAAA-MM-DD` |
+
+Requisições que não seguem essas regras recebem `400 Bad Request`.
 
 ## ▶️ Como rodar
 
@@ -93,8 +109,8 @@ Content-Type: application/json
 
 ```bash
 # clonar o repositório
-git clone https://github.com/SEU_USUARIO/controle-financeiro.git
-cd controle-financeiro
+git clone https://github.com/lucasryan-dev/controle-financeiro-api.git
+cd controle-financeiro-api
 
 # rodar a aplicação (Linux/Mac)
 ./mvnw spring-boot:run
@@ -112,7 +128,7 @@ A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro client
 - [x] Entidade `Transacao` com persistência via JPA
 - [x] Cadastrar e listar transações
 - [x] Buscar, atualizar e excluir transações (CRUD completo)
-- [ ] DTOs e validação dos dados de entrada
+- [x] DTOs e validação dos dados de entrada
 - [ ] Tratamento de erros padronizado
 - [ ] Categorias como entidade (relacionamento entre tabelas)
 - [ ] Relatórios: saldo do mês e gastos por categoria
@@ -127,4 +143,5 @@ A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro client
 
 **Lucas Ryan**
 
-
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/SEU_USUARIO)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/lucasryan-dev)
