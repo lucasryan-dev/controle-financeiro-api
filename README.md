@@ -72,7 +72,8 @@ src/main/java/com/lucasdev/controle_financeiro/
 - **Carregamento `LAZY` no relacionamento**: a categoria só é buscada no banco quando é usada, evitando consultas desnecessárias.
 - **Categorias iniciais com seeder idempotente**: ao subir, a aplicação cadastra as categorias padrão apenas se a tabela estiver vazia. Rodar uma ou várias vezes produz o mesmo resultado.
 - **Nomes de categoria únicos**: a regra é garantida em duas camadas. A Service verifica antes de salvar, sem diferenciar maiúsculas e minúsculas, e responde `409 Conflict`; o banco também tem uma constraint `UNIQUE` como proteção final.
-- **Consultas derivadas do Spring Data**: métodos como `existsByNomeIgnoreCase` geram o SQL a partir do nome, sem consulta escrita à mão.
+- **Exclusão de categoria bloqueada quando em uso**: em vez de apagar as transações junto (cascata) ou movê-las sem o usuário pedir, a API recusa a exclusão com `409 Conflict`. Assim o histórico financeiro nunca é perdido por acidente.
+- **Consultas derivadas do Spring Data**: métodos como `existsByNomeIgnoreCase`, `existsByNomeIgnoreCaseAndIdNot` e `existsByCategoriaId` geram o SQL a partir do nome, inclusive navegando pelo relacionamento entre entidades, sem consulta escrita à mão.
 - **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais podem ser definidas por variáveis de ambiente, para que senhas reais nunca fiquem no código.
 
 ## 📌 Endpoints
@@ -86,6 +87,8 @@ src/main/java/com/lucasdev/controle_financeiro/
 | `DELETE` | `/transacoes/{id}` | Exclui uma transação | `204 No Content` | `404` |
 | `POST` | `/categorias` | Cadastra uma categoria | `201 Created` | `400`, `409` |
 | `GET` | `/categorias` | Lista todas as categorias | `200 OK` | |
+| `PUT` | `/categorias/{id}` | Renomeia uma categoria | `200 OK` | `400`, `404`, `409` |
+| `DELETE` | `/categorias/{id}` | Exclui uma categoria sem transações | `204 No Content` | `404`, `409` |
 
 ### Categorias iniciais
 
@@ -102,6 +105,11 @@ Na primeira execução, a aplicação cadastra automaticamente: Alimentação, T
 ```
 
 O nome é obrigatório, tem no máximo 50 caracteres e não pode se repetir, sem diferenciar maiúsculas e minúsculas: se "Pet" já existe, "pet" é recusado com `409 Conflict`.
+
+**Regras para renomear e excluir:**
+- Ao renomear, a verificação de nome repetido ignora a própria categoria: "Lazer" pode virar "LAZER".
+- Renomear uma categoria atualiza automaticamente todas as transações ligadas a ela.
+- Uma categoria usada por alguma transação **não pode ser excluída** (`409 Conflict`). Para excluí-la, primeiro mude a categoria dessas transações.
 
 ### Exemplo: cadastrar uma transação
 
@@ -193,6 +201,16 @@ Todos os erros seguem o mesmo formato:
 }
 ```
 
+**Categoria em uso** `409 Conflict`
+```json
+{
+  "status": 409,
+  "mensagem": "Categoria em uso por transações e não pode ser excluída",
+  "campos": null,
+  "timestamp": "2026-11-16T16:58:02.233"
+}
+```
+
 **Erro inesperado** `500 Internal Server Error`
 ```json
 {
@@ -254,7 +272,7 @@ Os valores padrão servem para desenvolvimento local. Em produção, defina as v
 - [x] Tratamento de erros padronizado
 - [x] Cadastro de categorias, com categorias iniciais
 - [x] Relacionamento entre transações e categorias (`@ManyToOne`)
-- [ ] Renomear e excluir categorias (bloqueando a exclusão de categorias em uso)
+- [x] Renomear e excluir categorias (bloqueando a exclusão de categorias em uso)
 - [ ] Relatórios: saldo do mês e gastos por categoria
 - [ ] Filtros por período, tipo e categoria, com paginação
 - [ ] Dicas de saúde financeira baseadas na regra 50/30/20
