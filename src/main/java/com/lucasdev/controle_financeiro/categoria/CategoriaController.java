@@ -26,4 +26,15 @@ public class CategoriaController {
     public List<CategoriaResponse> listar(){
         return service.listarTodas();
     }
+
+    @PutMapping("/{id}")
+    public CategoriaResponse atualizar(@PathVariable Long id, @Valid @RequestBody CategoriaRequest request){
+        return service.atualizar(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void excluir(@PathVariable Long id){
+        service.excluir(id);
+    }
 }

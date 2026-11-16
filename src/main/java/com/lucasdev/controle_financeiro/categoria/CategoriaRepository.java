@@ -6,6 +6,8 @@ import java.util.List;
 
 public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
     boolean existsByNomeIgnoreCase(String nome);
-
+    boolean existsByNomeIgnoreCaseAndIdNot(String nome, Long id);
     List<Categoria> id(Long id);
+
+
 }
