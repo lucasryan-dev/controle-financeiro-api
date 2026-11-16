@@ -108,7 +108,7 @@ Content-Type: application/json
 | `descricao` | obrigatória, até 100 caracteres |
 | `valor` | obrigatório, maior que zero, no máximo 2 casas decimais |
 | `tipo` | obrigatório: `RECEITA` ou `DESPESA` |
-| `categoria` | obrigatória: `ALIMENTACAO`, `TRANSPORTE`, `MORADIA`, `SAUDE`, `EDUCACAO`, `LAZER`, `SALARIO` ou `OUTROS` |
+| `Categoria` | obrigatória: `ALIMENTACAO`, `TRANSPORTE`, `MORADIA`, `SAUDE`, `EDUCACAO`, `LAZER`, `SALARIO` ou `OUTROS` |
 | `data` | obrigatória, no formato `AAAA-MM-DD` |
 
 Requisições que não seguem essas regras recebem `400 Bad Request`.

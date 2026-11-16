@@ -1,5 +1,14 @@
 spring:
   application:
     name: controle-financeiro
+  datasource:
+    url: jdbc:postgresql://localhost:5432/controle_financeiro
+    username: ${DB_USERNAME:financeiro}
+    password: ${DB_PASSWORD:financeiro}
   jpa:
-        show-sql: true
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
