@@ -1,5 +1,7 @@
 package com.lucasdev.controle_financeiro.transacao;
 
+import com.lucasdev.controle_financeiro.categoria.CategoriaResponse;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -8,7 +10,7 @@ public record TransacaoResponse(
         String descricao,
         BigDecimal valor,
         TipoTransacao tipo,
-        Categoria categoria,
+        CategoriaResponse categoria,
         LocalDate data
 ) {
     public static TransacaoResponse from(Transacao transacao){
@@ -17,7 +19,7 @@ public record TransacaoResponse(
                 transacao.getDescricao(),
                 transacao.getValor(),
                 transacao.getTipo(),
-                transacao.getCategoria(),
+                CategoriaResponse.from(transacao.getCategoria()),
                 transacao.getData()
         );
     }

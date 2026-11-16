@@ -1,5 +1,7 @@
 package com.lucasdev.controle_financeiro.transacao;
 
+import com.lucasdev.controle_financeiro.categoria.Categoria;
+import com.lucasdev.controle_financeiro.categoria.CategoriaRepository;
 import com.lucasdev.controle_financeiro.exception.RecursoNaoEncontradoException;
 import org.springframework.stereotype.Service;
 
@@ -8,13 +10,17 @@ import java.util.List;
 @Service
 public class TransacaoService {
     private final TransacaoRepository repository;
+    private final CategoriaRepository categoriaRepository;
 
-    public TransacaoService(TransacaoRepository repository) {
+    public TransacaoService(TransacaoRepository repository,
+                            CategoriaRepository categoriaRepository) {
         this.repository = repository;
+        this.categoriaRepository = categoriaRepository;
     }
 
     public TransacaoResponse criar(TransacaoRequest request){
-        Transacao salva = repository.save(request.toEntity());
+        Categoria categoria = buscarCategoria(request.categoriaId());
+        Transacao salva = repository.save(request.toEntity(categoria));
         return TransacaoResponse.from(salva);
     }
 
@@ -40,7 +46,7 @@ public class TransacaoService {
         existente.setDescricao(dados.descricao());
         existente.setValor(dados.valor());
         existente.setTipo(dados.tipo());
-        existente.setCategoria(dados.categoria());
+        existente.setCategoria(buscarCategoria(dados.categoriaId()));
         existente.setData(dados.data());
 
         return TransacaoResponse.from(repository.save(existente));
@@ -51,4 +57,9 @@ public class TransacaoService {
         repository.delete(existente);
     }
 
+    private Categoria buscarCategoria(Long id){
+        return categoriaRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Categoria não encontrada"));
+
+    }
 }

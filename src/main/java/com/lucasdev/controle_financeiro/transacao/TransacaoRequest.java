@@ -1,5 +1,6 @@
 package com.lucasdev.controle_financeiro.transacao;
 
+import com.lucasdev.controle_financeiro.categoria.Categoria;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
@@ -19,12 +20,12 @@ public record TransacaoRequest(
         TipoTransacao tipo,
 
         @NotNull(message = "A categoria é obrigatória")
-        Categoria categoria,
+        Long categoriaId,
 
         @NotNull(message = "A data é obrigaória")
         LocalDate data
 ) {
-    public Transacao toEntity() {
+    public Transacao toEntity(Categoria categoria) {
         Transacao transacao = new Transacao();
         transacao.setDescricao(descricao);
         transacao.setValor(valor);

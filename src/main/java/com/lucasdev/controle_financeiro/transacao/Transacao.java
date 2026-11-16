@@ -1,6 +1,7 @@
 package com.lucasdev.controle_financeiro.transacao;
 
 
+import com.lucasdev.controle_financeiro.categoria.Categoria;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,8 +25,8 @@ public class Transacao {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TipoTransacao tipo;
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "categoria_id", nullable = false)
     private Categoria categoria;
     @Column(nullable = false)
     private LocalDate data;
