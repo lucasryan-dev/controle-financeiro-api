@@ -10,7 +10,7 @@ API REST para controle de finanças pessoais, desenvolvida com **Java e Spring B
 - **Spring Boot**
 - **Spring Web**: API REST
 - **Spring Data JPA / Hibernate**: persistência de dados
-- **H2 Database**: banco em memória para desenvolvimento
+- **PostgreSQL**: banco de dados relacional
 - **Bean Validation**: validação dos dados de entrada
 - **Lombok**: redução de código repetitivo
 - **Maven**: gerenciamento de dependências
@@ -60,6 +60,7 @@ src/main/java/com/lucasdev/controle_financeiro/
 - **Status HTTP semânticos**: `201` ao criar, `204` ao excluir, `400` para dados inválidos e `404` quando a transação não existe.
 - **Tratamento global de erros com `@RestControllerAdvice`**: todos os erros saem no mesmo formato JSON. Erros inesperados são registrados no log, e o cliente recebe só uma mensagem genérica, sem expor detalhes internos como stack trace ou SQL.
 - **Exceções de domínio**: a camada de serviço lança `RecursoNaoEncontradoException` e não conhece nada de HTTP. Quem traduz a exceção para `404` é o tratador global.
+- **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais podem ser definidas por variáveis de ambiente, para que senhas reais nunca fiquem no código.
 
 ## 📌 Endpoints
 
@@ -161,7 +162,22 @@ Todos os erros seguem o mesmo formato:
 
 ## ▶️ Como rodar
 
-**Pré-requisitos:** Java 21+ e Git. O Maven não precisa estar instalado, porque o projeto usa o Maven Wrapper.
+**Pré-requisitos:** Java 21+, Git e PostgreSQL. O Maven não precisa estar instalado, porque o projeto usa o Maven Wrapper.
+
+### 1. Criar o banco de dados
+
+```bash
+sudo -u postgres psql
+```
+```sql
+CREATE USER financeiro WITH PASSWORD 'financeiro';
+CREATE DATABASE controle_financeiro OWNER financeiro;
+\q
+```
+
+As tabelas são criadas automaticamente pela aplicação na primeira execução.
+
+### 2. Rodar a aplicação
 
 ```bash
 # clonar o repositório
@@ -177,7 +193,14 @@ mvnw.cmd spring-boot:run
 
 A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro cliente HTTP para testar os endpoints.
 
-> O banco H2 roda em memória: os dados são apagados sempre que a aplicação reinicia.
+### Variáveis de ambiente (opcionais)
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `DB_USERNAME` | `financeiro` | usuário do banco |
+| `DB_PASSWORD` | `financeiro` | senha do banco |
+
+Os valores padrão servem para desenvolvimento local. Em produção, defina as variáveis com credenciais seguras.
 
 ## 🗺️ Roadmap
 
@@ -192,12 +215,14 @@ A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro client
 - [ ] Dicas de saúde financeira baseadas na regra 50/30/20
 - [ ] Testes automatizados (JUnit, Mockito e MockMvc)
 - [ ] Documentação com Swagger/OpenAPI
-- [ ] Banco PostgreSQL e Docker
+- [x] Banco de dados PostgreSQL
+- [ ] Migrations com Flyway
+- [ ] Docker e docker-compose
 - [ ] Autenticação com JWT (Spring Security)
 
 ## 👤 Autor
 
 **Lucas Ryan**
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lucas-ryan-33848524b/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)]([ttps://www.linkedin.com/in/SEU_USUARIO](https://www.linkedin.com/in/lucas-ryan-33848524b/))
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/lucasryan-dev)
