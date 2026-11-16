@@ -16,10 +16,10 @@ public record TransacaoRequest(
         BigDecimal valor,
 
         @NotNull(message = "O tipo é obrigatório")
-        tipoTransacao tipo,
+        TipoTransacao tipo,
 
         @NotNull(message = "A categoria é obrigatória")
-        categoria categoria,
+        Categoria categoria,
 
         @NotNull(message = "A data é obrigaória")
         LocalDate data

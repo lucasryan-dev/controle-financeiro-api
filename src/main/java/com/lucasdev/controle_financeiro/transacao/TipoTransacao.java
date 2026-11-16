@@ -1,6 +1,6 @@
 package com.lucasdev.controle_financeiro.transacao;
 
-public enum tipoTransacao {
+public enum TipoTransacao {
     RECEITA,
     DESPESA
 }

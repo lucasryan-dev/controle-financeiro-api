@@ -7,8 +7,8 @@ public record TransacaoResponse(
         Long id,
         String descricao,
         BigDecimal valor,
-        tipoTransacao tipo,
-        categoria categoria,
+        TipoTransacao tipo,
+        Categoria categoria,
         LocalDate data
 ) {
     public static TransacaoResponse from(Transacao transacao){

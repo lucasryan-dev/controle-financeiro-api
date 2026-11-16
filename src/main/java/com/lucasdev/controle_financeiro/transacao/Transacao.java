@@ -23,10 +23,10 @@ public class Transacao {
     private BigDecimal valor;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private tipoTransacao tipo;
+    private TipoTransacao tipo;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private categoria categoria;
+    private Categoria categoria;
     @Column(nullable = false)
     private LocalDate data;
 }

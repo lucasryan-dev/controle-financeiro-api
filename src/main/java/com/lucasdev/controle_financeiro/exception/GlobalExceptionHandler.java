@@ -45,4 +45,10 @@ public class GlobalExceptionHandler {
     public ErroResponse tratarJsonInvalido(HttpMessageNotReadableException ex){
         return new ErroResponse(400, "JSON inválido ou com valores não aceitos" );
     }
+
+    @ExceptionHandler(ConflitoException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErroResponse tratarConflito(ConflitoException ex){
+        return new ErroResponse(409, ex.getMessage());
+    }
 }
