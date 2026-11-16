@@ -34,7 +34,16 @@ Requisição HTTP (JSON)
 
 ```
 src/main/java/com/lucasdev/controle_financeiro/
+├── categoria/
+│   ├── Categoria.java                       # entidade JPA
+│   ├── CategoriaRequest.java                # DTO de entrada, com validações
+│   ├── CategoriaResponse.java               # DTO de saída
+│   ├── CategoriaRepository.java             # acesso ao banco
+│   ├── CategoriaService.java                # regras de negócio
+│   ├── CategoriaController.java             # endpoints REST
+│   └── CategoriaSeeder.java                 # cadastra as categorias iniciais
 ├── exception/
+│   ├── ConflitoException.java               # exceção de dado duplicado (409)
 │   ├── ErroResponse.java                    # formato padrão das respostas de erro
 │   ├── RecursoNaoEncontradoException.java   # exceção de recurso inexistente (404)
 │   └── GlobalExceptionHandler.java          # tratamento global de erros
@@ -60,6 +69,9 @@ src/main/java/com/lucasdev/controle_financeiro/
 - **Status HTTP semânticos**: `201` ao criar, `204` ao excluir, `400` para dados inválidos e `404` quando a transação não existe.
 - **Tratamento global de erros com `@RestControllerAdvice`**: todos os erros saem no mesmo formato JSON. Erros inesperados são registrados no log, e o cliente recebe só uma mensagem genérica, sem expor detalhes internos como stack trace ou SQL.
 - **Exceções de domínio**: a camada de serviço lança `RecursoNaoEncontradoException` e não conhece nada de HTTP. Quem traduz a exceção para `404` é o tratador global.
+- **Categorias iniciais com seeder idempotente**: ao subir, a aplicação cadastra as categorias padrão apenas se a tabela estiver vazia. Rodar uma ou várias vezes produz o mesmo resultado.
+- **Nomes de categoria únicos**: a regra é garantida em duas camadas. A Service verifica antes de salvar, sem diferenciar maiúsculas e minúsculas, e responde `409 Conflict`; o banco também tem uma constraint `UNIQUE` como proteção final.
+- **Consultas derivadas do Spring Data**: métodos como `existsByNomeIgnoreCase` geram o SQL a partir do nome, sem consulta escrita à mão.
 - **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais podem ser definidas por variáveis de ambiente, para que senhas reais nunca fiquem no código.
 
 ## 📌 Endpoints
@@ -71,6 +83,24 @@ src/main/java/com/lucasdev/controle_financeiro/
 | `GET` | `/transacoes/{id}` | Busca uma transação pelo id | `200 OK` | `404` |
 | `PUT` | `/transacoes/{id}` | Atualiza uma transação | `200 OK` | `400`, `404` |
 | `DELETE` | `/transacoes/{id}` | Exclui uma transação | `204 No Content` | `404` |
+| `POST` | `/categorias` | Cadastra uma categoria | `201 Created` | `400`, `409` |
+| `GET` | `/categorias` | Lista todas as categorias | `200 OK` | |
+
+### Categorias iniciais
+
+Na primeira execução, a aplicação cadastra automaticamente: Alimentação, Transporte, Moradia, Saúde, Educação, Lazer, Salário e Outros. Novas categorias podem ser criadas pelo endpoint `POST /categorias`.
+
+**Exemplo** `POST /categorias`
+```json
+{ "nome": "Pet" }
+```
+
+**Resposta** `201 Created`
+```json
+{ "id": 9, "nome": "Pet" }
+```
+
+O nome é obrigatório, tem no máximo 50 caracteres e não pode se repetir, sem diferenciar maiúsculas e minúsculas: se "Pet" já existe, "pet" é recusado com `409 Conflict`.
 
 ### Exemplo: cadastrar uma transação
 
@@ -108,7 +138,7 @@ Content-Type: application/json
 | `descricao` | obrigatória, até 100 caracteres |
 | `valor` | obrigatório, maior que zero, no máximo 2 casas decimais |
 | `tipo` | obrigatório: `RECEITA` ou `DESPESA` |
-| `Categoria` | obrigatória: `ALIMENTACAO`, `TRANSPORTE`, `MORADIA`, `SAUDE`, `EDUCACAO`, `LAZER`, `SALARIO` ou `OUTROS` |
+| `categoria` | obrigatória: `ALIMENTACAO`, `TRANSPORTE`, `MORADIA`, `SAUDE`, `EDUCACAO`, `LAZER`, `SALARIO` ou `OUTROS` |
 | `data` | obrigatória, no formato `AAAA-MM-DD` |
 
 Requisições que não seguem essas regras recebem `400 Bad Request`.
@@ -147,6 +177,16 @@ Todos os erros seguem o mesmo formato:
   "mensagem": "Transação não encontrada",
   "campos": null,
   "timestamp": "2026-11-15T16:56:40.871"
+}
+```
+
+**Categoria com nome repetido** `409 Conflict`
+```json
+{
+  "status": 409,
+  "mensagem": "Já existe uma categoria com esse nome",
+  "campos": null,
+  "timestamp": "2026-11-16T12:50:21.512"
 }
 ```
 
@@ -209,7 +249,8 @@ Os valores padrão servem para desenvolvimento local. Em produção, defina as v
 - [x] Buscar, atualizar e excluir transações (CRUD completo)
 - [x] DTOs e validação dos dados de entrada
 - [x] Tratamento de erros padronizado
-- [ ] Categorias como entidade (relacionamento entre tabelas)
+- [x] Cadastro de categorias, com categorias iniciais
+- [ ] Relacionamento entre transações e categorias (`@ManyToOne`)
 - [ ] Relatórios: saldo do mês e gastos por categoria
 - [ ] Filtros por período, tipo e categoria, com paginação
 - [ ] Dicas de saúde financeira baseadas na regra 50/30/20
@@ -224,5 +265,5 @@ Os valores padrão servem para desenvolvimento local. Em produção, defina as v
 
 **Lucas Ryan**
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)]([ttps://www.linkedin.com/in/SEU_USUARIO](https://www.linkedin.com/in/lucas-ryan-33848524b/))
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](www.linkedin.com/in/lucas-ryan-33848524b)
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/lucasryan-dev)
