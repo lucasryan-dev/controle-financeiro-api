@@ -1,6 +1,6 @@
 # 💰 Controle Financeiro API
 
-API REST para controle de finanças pessoais, desenvolvida com **Java e Spring Boot**. Com ela você registra receitas e despesas, acompanha o saldo e, nas próximas versões, recebe **dicas para melhorar sua saúde financeira** a partir dos seus gastos.
+API REST para controle de finanças pessoais, desenvolvida com **Java e Spring Boot**. Com ela você registra receitas e despesas, organiza os gastos em categorias, acompanha relatórios do mês e recebe **dicas para melhorar sua saúde financeira**, baseadas na regra 50/30/20.
 
 > 🚧 **Projeto em desenvolvimento.** Estou construindo esta API em etapas para estudar e praticar desenvolvimento back-end. Acompanhe a evolução no [roadmap](#️-roadmap) e no histórico de commits.
 
@@ -52,6 +52,8 @@ src/main/java/com/lucasdev/controle_financeiro/
 │   ├── ResumoMensalResponse.java            # DTO do resumo do mês
 │   ├── TotalPorCategoria.java               # projeção da consulta agrupada
 │   ├── GastoPorCategoriaResponse.java       # DTO dos gastos por categoria
+│   ├── IndicadorGrupo.java                  # valor, percentual e meta de um grupo
+│   ├── DicasResponse.java                   # DTO das dicas de saúde financeira
 │   ├── RelatorioService.java                # cálculos dos relatórios
 │   └── RelatorioController.java             # endpoints de relatórios
 └── transacao/
@@ -86,6 +88,7 @@ src/main/java/com/lucasdev/controle_financeiro/
 - **Consultas derivadas do Spring Data**: métodos como `existsByNomeIgnoreCase`, `existsByNomeIgnoreCaseAndIdNot` e `existsByCategoriaId` geram o SQL a partir do nome, inclusive navegando pelo relacionamento entre entidades, sem consulta escrita à mão.
 - **Somas feitas no banco com JPQL**: os totais do relatório são calculados com `SUM` direto no banco, em vez de carregar todas as transações para a memória. As consultas usam parâmetros nomeados, o que protege contra SQL Injection, e `COALESCE` para devolver `0` em meses sem transações.
 - **Agrupamento no banco com projeção**: os gastos por categoria são somados com `GROUP BY` e já ordenados pelo banco. O resultado é convertido direto em objetos com `SELECT new` (projeção com construtor), e a Service só calcula os percentuais.
+- **Dicas geradas por regras de negócio**: as dicas não dependem de inteligência artificial, e sim de regras claras e testáveis na camada de serviço, baseadas na regra 50/30/20. A poupança é calculada como o saldo do mês, e cada grupo é representado pelo mesmo record (`IndicadorGrupo`), evitando campos repetidos.
 - **Cálculos monetários com `BigDecimal`**: percentuais com 2 casas decimais e arredondamento `HALF_UP`, multiplicando antes de dividir para não perder precisão. Meses sem receitas devolvem percentual `0` em vez de erro de divisão por zero.
 - **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais podem ser definidas por variáveis de ambiente, para que senhas reais nunca fiquem no código.
 
@@ -104,6 +107,7 @@ src/main/java/com/lucasdev/controle_financeiro/
 | `DELETE` | `/categorias/{id}` | Exclui uma categoria sem transações | `204 No Content` | `404`, `409` |
 | `GET` | `/relatorios/resumo?ano={ano}&mes={mes}` | Resumo financeiro do mês | `200 OK` | `400` |
 | `GET` | `/relatorios/gastos-por-categoria?ano={ano}&mes={mes}` | Despesas do mês agrupadas por categoria | `200 OK` | `400` |
+| `GET` | `/relatorios/dicas?ano={ano}&mes={mes}` | Dicas de saúde financeira (regra 50/30/20) | `200 OK` | `400` |
 
 ### Relatório: resumo do mês
 
@@ -147,6 +151,40 @@ GET /relatorios/gastos-por-categoria?ano=2026&mes=11
 - Ordenado do maior para o menor gasto
 - `percentual`: quanto cada categoria representa do total de despesas do mês
 - Meses sem despesas devolvem uma lista vazia
+
+### 💡 Dicas de saúde financeira
+
+O app compara os gastos do mês com a **regra 50/30/20** e gera dicas personalizadas:
+
+| Grupo | Recomendado | Como é calculado |
+|---|---|---|
+| Necessidades | até **50%** da renda | despesas de categorias do grupo `NECESSIDADE` |
+| Desejos | até **30%** da renda | despesas de categorias do grupo `DESEJO` |
+| Poupança | pelo menos **20%** da renda | receitas menos despesas do mês |
+
+**Requisição**
+```http
+GET /relatorios/dicas?ano=2026&mes=11
+```
+
+**Resposta** `200 OK`
+```json
+{
+  "necessidades": { "valor": 1350.00, "percentual": 45.00, "recomendado": 50 },
+  "desejos":      { "valor": 1000.00, "percentual": 33.33, "recomendado": 30 },
+  "poupanca":     { "valor": 650.00,  "percentual": 21.67, "recomendado": 20 },
+  "dicas": [
+    "Seus gastos com necessidades estão dentro do recomendado.",
+    "Atenção: seus gastos com desejos estão acima dos 30% recomendados. Revise seus gastos para não faltar com suas necessidades.",
+    "Parabéns! Você está poupando pelo menos 20% da sua renda. Você está no caminho certo."
+  ]
+}
+```
+
+**Regras das dicas:**
+- **Sem receitas no mês**: o app pede que as receitas sejam cadastradas, sem calcular as demais dicas.
+- **Necessidades e desejos**: alerta quando o percentual passa do recomendado.
+- **Poupança**: três situações. Parabéns com 20% ou mais, aviso quando está poupando menos que isso, e alerta quando os gastos passam da renda (poupança negativa).
 
 ### Categorias iniciais
 
@@ -363,7 +401,7 @@ Os valores padrão servem para desenvolvimento local. Em produção, defina as v
 - [x] Relatório: gastos por categoria
 - [ ] Filtros por período, tipo e categoria, com paginação
 - [x] Classificação das categorias em necessidade, desejo e renda
-- [ ] Dicas de saúde financeira baseadas na regra 50/30/20
+- [x] Dicas de saúde financeira baseadas na regra 50/30/20
 - [ ] Testes automatizados (JUnit, Mockito e MockMvc)
 - [ ] Documentação com Swagger/OpenAPI
 - [x] Banco de dados PostgreSQL
