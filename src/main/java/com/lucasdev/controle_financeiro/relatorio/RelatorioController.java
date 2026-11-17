@@ -1,11 +1,10 @@
 package com.lucasdev.controle_financeiro.relatorio;
 
-
-import jakarta.persistence.criteria.CriteriaBuilder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 @RestController
 @RequestMapping("/relatorios")
@@ -20,6 +19,11 @@ public class RelatorioController {
     public ResumoMensalResponse resumo(@RequestParam Integer ano,
                                        @RequestParam Integer mes){
         return relatorioService.resumoMensal(ano, mes);
+    }
 
+    @GetMapping("/gastos-por-categoria")
+    public List<GastoPorCategoriaResponse> gastosPorCategoria(@RequestParam Integer ano,
+                                                              @RequestParam Integer mes){
+        return relatorioService.gastosPorCategoria(ano, mes);
     }
 }

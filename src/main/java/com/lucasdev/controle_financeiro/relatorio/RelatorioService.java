@@ -8,6 +8,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class RelatorioService {
@@ -40,6 +42,26 @@ public class RelatorioService {
         BigDecimal multiplicado = parte.multiply(BigDecimal.valueOf(100));
         BigDecimal resultado = multiplicado.divide(total, 2, RoundingMode.HALF_UP);
         return resultado;
+    }
+
+    public List<GastoPorCategoriaResponse> gastosPorCategoria(Integer ano, Integer mes){
+        YearMonth periodo = YearMonth.of(ano, mes);
+        LocalDate inicio = periodo.atDay(1);
+        LocalDate fim = periodo.atEndOfMonth();
+
+        List<TotalPorCategoria> totais = transacaoRepository
+                .somarPorCategoria(TipoTransacao.DESPESA, inicio, fim);
+
+        BigDecimal totalGeral = transacaoRepository
+                .somarPorTipoEPeriodo(TipoTransacao.DESPESA, inicio, fim);
+
+        List<GastoPorCategoriaResponse> resposta = new ArrayList<>();
+        for (TotalPorCategoria item : totais){
+            BigDecimal percentual = calcularPercentual(item.total(), totalGeral);
+            resposta.add(new GastoPorCategoriaResponse(item.categoria(), item.total(), percentual));
+        }
+
+        return resposta;
     }
 
 }
