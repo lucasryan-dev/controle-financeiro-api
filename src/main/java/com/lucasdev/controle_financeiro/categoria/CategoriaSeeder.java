@@ -22,14 +22,14 @@ public class CategoriaSeeder implements CommandLineRunner {
         }
 
         repository.saveAll(List.of(
-                new Categoria("Alimentação"),
-                new Categoria("Transporte"),
-                new Categoria("Moradia"),
-                new Categoria("Saúde"),
-                new Categoria("Educação"),
-                new Categoria("Lazer"),
-                new Categoria("Salário"),
-                new Categoria("Outros")
+                new Categoria("Alimentação", GrupoCategoria.NECESSIDADE),
+                new Categoria("Transporte", GrupoCategoria.NECESSIDADE),
+                new Categoria("Moradia", GrupoCategoria.NECESSIDADE),
+                new Categoria("Saúde", GrupoCategoria.NECESSIDADE),
+                new Categoria("Educação", GrupoCategoria.NECESSIDADE),
+                new Categoria("Lazer", GrupoCategoria.DESEJO),
+                new Categoria("Salário", GrupoCategoria.RENDA),
+                new Categoria("Outros", GrupoCategoria.DESEJO)
                 ));
     }
 

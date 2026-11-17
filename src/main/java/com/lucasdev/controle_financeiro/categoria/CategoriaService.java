@@ -47,6 +47,7 @@ public class CategoriaService {
         }
 
         existente.setNome(request.nome());
+        existente.setGrupo(request.grupo());
         return CategoriaResponse.from(repository.save(existente));
     }
 

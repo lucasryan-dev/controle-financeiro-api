@@ -16,8 +16,13 @@ public class Categoria {
     @Column(nullable = false, unique = true, length = 50)
    private String nome;
 
-    public Categoria(String nome) {
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private GrupoCategoria grupo;
+
+    public Categoria(String nome, GrupoCategoria grupo) {
         this.nome = nome;
+        this.grupo = grupo;
     }
 }
 
