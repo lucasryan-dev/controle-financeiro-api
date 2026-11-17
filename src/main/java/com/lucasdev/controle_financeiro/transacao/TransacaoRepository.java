@@ -1,5 +1,6 @@
 package com.lucasdev.controle_financeiro.transacao;
 
+import com.lucasdev.controle_financeiro.categoria.GrupoCategoria;
 import com.lucasdev.controle_financeiro.relatorio.TotalPorCategoria;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -37,4 +38,17 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long> {
                                               @Param("fim") LocalDate fim);
 
     TipoTransacao Tipo(TipoTransacao tipo);
+
+    @Query("""
+        SELECT COALESCE(SUM(t.valor), 0)
+        FROM Transacao t
+        JOIN t.categoria c
+        WHERE t.tipo = :tipo
+          AND c.grupo = :grupo
+          AND t.data BETWEEN :inicio AND :fim
+        """)
+    BigDecimal somarPorGrupoEPeriodo(@Param("tipo") TipoTransacao tipo,
+                                     @Param("grupo") GrupoCategoria grupo,
+                                     @Param("inicio") LocalDate inicio,
+                                     @Param("fim") LocalDate fim);
 }
