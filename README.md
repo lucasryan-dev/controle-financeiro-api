@@ -47,6 +47,10 @@ src/main/java/com/lucasdev/controle_financeiro/
 │   ├── ErroResponse.java                    # formato padrão das respostas de erro
 │   ├── RecursoNaoEncontradoException.java   # exceção de recurso inexistente (404)
 │   └── GlobalExceptionHandler.java          # tratamento global de erros
+├── relatorio/
+│   ├── ResumoMensalResponse.java            # DTO do resumo do mês
+│   ├── RelatorioService.java                # cálculos dos relatórios
+│   └── RelatorioController.java             # endpoints de relatórios
 └── transacao/
     ├── Transacao.java              # entidade JPA
     ├── TipoTransacao.java          # enum: RECEITA, DESPESA
@@ -74,6 +78,8 @@ src/main/java/com/lucasdev/controle_financeiro/
 - **Nomes de categoria únicos**: a regra é garantida em duas camadas. A Service verifica antes de salvar, sem diferenciar maiúsculas e minúsculas, e responde `409 Conflict`; o banco também tem uma constraint `UNIQUE` como proteção final.
 - **Exclusão de categoria bloqueada quando em uso**: em vez de apagar as transações junto (cascata) ou movê-las sem o usuário pedir, a API recusa a exclusão com `409 Conflict`. Assim o histórico financeiro nunca é perdido por acidente.
 - **Consultas derivadas do Spring Data**: métodos como `existsByNomeIgnoreCase`, `existsByNomeIgnoreCaseAndIdNot` e `existsByCategoriaId` geram o SQL a partir do nome, inclusive navegando pelo relacionamento entre entidades, sem consulta escrita à mão.
+- **Somas feitas no banco com JPQL**: os totais do relatório são calculados com `SUM` direto no banco, em vez de carregar todas as transações para a memória. As consultas usam parâmetros nomeados, o que protege contra SQL Injection, e `COALESCE` para devolver `0` em meses sem transações.
+- **Cálculos monetários com `BigDecimal`**: percentuais com 2 casas decimais e arredondamento `HALF_UP`, multiplicando antes de dividir para não perder precisão. Meses sem receitas devolvem percentual `0` em vez de erro de divisão por zero.
 - **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais podem ser definidas por variáveis de ambiente, para que senhas reais nunca fiquem no código.
 
 ## 📌 Endpoints
@@ -89,6 +95,30 @@ src/main/java/com/lucasdev/controle_financeiro/
 | `GET` | `/categorias` | Lista todas as categorias | `200 OK` | |
 | `PUT` | `/categorias/{id}` | Renomeia uma categoria | `200 OK` | `400`, `404`, `409` |
 | `DELETE` | `/categorias/{id}` | Exclui uma categoria sem transações | `204 No Content` | `404`, `409` |
+| `GET` | `/relatorios/resumo?ano={ano}&mes={mes}` | Resumo financeiro do mês | `200 OK` | |
+
+### Relatório: resumo do mês
+
+**Requisição**
+```http
+GET /relatorios/resumo?ano=2026&mes=11
+```
+
+**Resposta** `200 OK`
+```json
+{
+  "ano": 2026,
+  "mes": 11,
+  "totalReceitas": 3000.00,
+  "totalDespesas": 1250.90,
+  "saldo": 1749.10,
+  "percentualGasto": 41.70
+}
+```
+
+- `saldo`: receitas menos despesas do mês
+- `percentualGasto`: quanto das receitas foi gasto, em porcentagem
+- Meses sem transações devolvem todos os valores como `0`
 
 ### Categorias iniciais
 
@@ -273,7 +303,8 @@ Os valores padrão servem para desenvolvimento local. Em produção, defina as v
 - [x] Cadastro de categorias, com categorias iniciais
 - [x] Relacionamento entre transações e categorias (`@ManyToOne`)
 - [x] Renomear e excluir categorias (bloqueando a exclusão de categorias em uso)
-- [ ] Relatórios: saldo do mês e gastos por categoria
+- [x] Relatório: resumo do mês (receitas, despesas, saldo e percentual gasto)
+- [ ] Relatório: gastos por categoria
 - [ ] Filtros por período, tipo e categoria, com paginação
 - [ ] Dicas de saúde financeira baseadas na regra 50/30/20
 - [ ] Testes automatizados (JUnit, Mockito e MockMvc)
