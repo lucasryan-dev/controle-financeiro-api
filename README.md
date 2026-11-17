@@ -408,6 +408,7 @@ Os valores padrão servem para desenvolvimento local. Em produção, defina as v
 - [ ] Migrations com Flyway
 - [ ] Docker e docker-compose
 - [ ] Autenticação com JWT (Spring Security)
+- [ ] Dicas personalizadas com IA (Spring AI), usando as regras atuais como base e sem enviar dados pessoais
 
 ## 👤 Autor
 
