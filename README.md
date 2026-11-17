@@ -71,6 +71,7 @@ src/main/java/com/lucasdev/controle_financeiro/
 - **Validação com Bean Validation**: dados inválidos são recusados com `400 Bad Request` antes de chegar ao banco.
 - **Status HTTP semânticos**: `201` ao criar, `204` ao excluir, `400` para dados inválidos e `404` quando a transação não existe.
 - **Tratamento global de erros com `@RestControllerAdvice`**: todos os erros saem no mesmo formato JSON. Erros inesperados são registrados no log, e o cliente recebe só uma mensagem genérica, sem expor detalhes internos como stack trace ou SQL.
+- **Mensagens de erro controladas**: para exceções da própria aplicação, a resposta usa a mensagem escrita para o usuário da API. Para exceções do Java e do Spring (parâmetro ausente, tipo errado, data inválida), a API responde com uma mensagem fixa em português, sem expor detalhes internos.
 - **Exceções de domínio**: a camada de serviço lança `RecursoNaoEncontradoException` e não conhece nada de HTTP. Quem traduz a exceção para `404` é o tratador global.
 - **Categorias como entidade, relacionadas por `@ManyToOne`**: cada transação guarda apenas o id da categoria, em uma chave estrangeira (`categoria_id`). O usuário pode criar novas categorias sem mudar o código, e renomear uma categoria reflete em todas as transações ligadas a ela.
 - **Carregamento `LAZY` no relacionamento**: a categoria só é buscada no banco quando é usada, evitando consultas desnecessárias.
@@ -95,7 +96,7 @@ src/main/java/com/lucasdev/controle_financeiro/
 | `GET` | `/categorias` | Lista todas as categorias | `200 OK` | |
 | `PUT` | `/categorias/{id}` | Renomeia uma categoria | `200 OK` | `400`, `404`, `409` |
 | `DELETE` | `/categorias/{id}` | Exclui uma categoria sem transações | `204 No Content` | `404`, `409` |
-| `GET` | `/relatorios/resumo?ano={ano}&mes={mes}` | Resumo financeiro do mês | `200 OK` | |
+| `GET` | `/relatorios/resumo?ano={ano}&mes={mes}` | Resumo financeiro do mês | `200 OK` | `400` |
 
 ### Relatório: resumo do mês
 
@@ -208,6 +209,18 @@ Todos os erros seguem o mesmo formato:
   "mensagem": "JSON inválido ou com valores não aceitos",
   "campos": null,
   "timestamp": "2026-11-15T16:56:03.120"
+}
+```
+
+**Parâmetro da URL inválido ou ausente** `400 Bad Request`
+
+Por exemplo, `GET /relatorios/resumo?ano=2026&mes=13`, sem o `mes` ou com `mes=abc`:
+```json
+{
+  "status": 400,
+  "mensagem": "Parâmetro inválido ou ausente na requisição",
+  "campos": null,
+  "timestamp": "2026-11-17T10:53:44.610"
 }
 ```
 
