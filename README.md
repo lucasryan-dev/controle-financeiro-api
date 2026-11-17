@@ -36,6 +36,7 @@ Requisição HTTP (JSON)
 src/main/java/com/lucasdev/controle_financeiro/
 ├── categoria/
 │   ├── Categoria.java                       # entidade JPA
+│   ├── GrupoCategoria.java                  # enum: NECESSIDADE, DESEJO, RENDA
 │   ├── CategoriaRequest.java                # DTO de entrada, com validações
 │   ├── CategoriaResponse.java               # DTO de saída
 │   ├── CategoriaRepository.java             # acesso ao banco
@@ -77,6 +78,8 @@ src/main/java/com/lucasdev/controle_financeiro/
 - **Exceções de domínio**: a camada de serviço lança `RecursoNaoEncontradoException` e não conhece nada de HTTP. Quem traduz a exceção para `404` é o tratador global.
 - **Categorias como entidade, relacionadas por `@ManyToOne`**: cada transação guarda apenas o id da categoria, em uma chave estrangeira (`categoria_id`). O usuário pode criar novas categorias sem mudar o código, e renomear uma categoria reflete em todas as transações ligadas a ela.
 - **Carregamento `LAZY` no relacionamento**: a categoria só é buscada no banco quando é usada, evitando consultas desnecessárias.
+- **Grupo na categoria, e não na transação**: classificar cada categoria como necessidade, desejo ou renda uma única vez evita que o usuário precise classificar cada gasto. A categoria "Outros" é tratada como desejo, a opção mais cautelosa.
+- **Reaproveitamento de DTOs**: a resposta de transação usa o `CategoriaResponse`, então qualquer campo novo da categoria, como o grupo, aparece automaticamente nas transações.
 - **Categorias iniciais com seeder idempotente**: ao subir, a aplicação cadastra as categorias padrão apenas se a tabela estiver vazia. Rodar uma ou várias vezes produz o mesmo resultado.
 - **Nomes de categoria únicos**: a regra é garantida em duas camadas. A Service verifica antes de salvar, sem diferenciar maiúsculas e minúsculas, e responde `409 Conflict`; o banco também tem uma constraint `UNIQUE` como proteção final.
 - **Exclusão de categoria bloqueada quando em uso**: em vez de apagar as transações junto (cascata) ou movê-las sem o usuário pedir, a API recusa a exclusão com `409 Conflict`. Assim o histórico financeiro nunca é perdido por acidente.
@@ -147,19 +150,35 @@ GET /relatorios/gastos-por-categoria?ano=2026&mes=11
 
 ### Categorias iniciais
 
-Na primeira execução, a aplicação cadastra automaticamente: Alimentação, Transporte, Moradia, Saúde, Educação, Lazer, Salário e Outros. Novas categorias podem ser criadas pelo endpoint `POST /categorias`.
+Cada categoria pertence a um **grupo**, usado nas dicas de saúde financeira (regra 50/30/20):
+
+| Grupo | Significado |
+|---|---|
+| `NECESSIDADE` | gastos essenciais para viver |
+| `DESEJO` | gastos que podem ser reduzidos |
+| `RENDA` | categorias de receita, que não entram na conta dos gastos |
+
+Na primeira execução, a aplicação cadastra automaticamente:
+
+| Categoria | Grupo |
+|---|---|
+| Alimentação, Transporte, Moradia, Saúde, Educação | `NECESSIDADE` |
+| Lazer, Outros | `DESEJO` |
+| Salário | `RENDA` |
+
+Novas categorias podem ser criadas pelo endpoint `POST /categorias`.
 
 **Exemplo** `POST /categorias`
 ```json
-{ "nome": "Pet" }
+{ "nome": "Pet", "grupo": "NECESSIDADE" }
 ```
 
 **Resposta** `201 Created`
 ```json
-{ "id": 9, "nome": "Pet" }
+{ "id": 9, "nome": "Pet", "grupo": "NECESSIDADE" }
 ```
 
-O nome é obrigatório, tem no máximo 50 caracteres e não pode se repetir, sem diferenciar maiúsculas e minúsculas: se "Pet" já existe, "pet" é recusado com `409 Conflict`.
+O nome é obrigatório, tem no máximo 50 caracteres e não pode se repetir, sem diferenciar maiúsculas e minúsculas: se "Pet" já existe, "pet" é recusado com `409 Conflict`. O grupo também é obrigatório.
 
 **Regras para renomear e excluir:**
 - Ao renomear, a verificação de nome repetido ignora a própria categoria: "Lazer" pode virar "LAZER".
@@ -190,12 +209,12 @@ Content-Type: application/json
   "descricao": "Salário",
   "valor": 3000.00,
   "tipo": "RECEITA",
-  "categoria": { "id": 7, "nome": "Salário" },
+  "categoria": { "id": 7, "nome": "Salário", "grupo": "RENDA" },
   "data": "2026-11-05"
 }
 ```
 
-A transação recebe o **id** de uma categoria existente (consulte os ids em `GET /categorias`) e a resposta traz a categoria completa, com id e nome.
+A transação recebe o **id** de uma categoria existente (consulte os ids em `GET /categorias`) e a resposta traz a categoria completa, com id, nome e grupo.
 
 ### Regras de validação
 
@@ -343,6 +362,7 @@ Os valores padrão servem para desenvolvimento local. Em produção, defina as v
 - [x] Relatório: resumo do mês (receitas, despesas, saldo e percentual gasto)
 - [x] Relatório: gastos por categoria
 - [ ] Filtros por período, tipo e categoria, com paginação
+- [x] Classificação das categorias em necessidade, desejo e renda
 - [ ] Dicas de saúde financeira baseadas na regra 50/30/20
 - [ ] Testes automatizados (JUnit, Mockito e MockMvc)
 - [ ] Documentação com Swagger/OpenAPI
