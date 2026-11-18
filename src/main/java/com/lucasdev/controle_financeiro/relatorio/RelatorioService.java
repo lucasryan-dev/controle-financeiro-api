@@ -117,7 +117,7 @@ public class RelatorioService {
 
         if (percentualPoupanca.compareTo(BigDecimal.valueOf(20)) >= 0 ){
             dicas.add("Parabéns! Vocẽ está poupando pelo menos 20% da sua renda. Vocẽ está no caminho certo.");
-        } else if (percentualPoupanca.compareTo(BigDecimal.valueOf(10)) < 0 ){
+        } else if (percentualPoupanca.compareTo(BigDecimal.ZERO) >= 0){
             dicas.add("Vocẽ está poupando, mas menos que o recomendado. Tente reduzir alguns gastos com desejos para guardar mais.");
         }else {
             dicas.add("Alerta: neste mês você gastou mais do que ganhou. Revise seus gastos com urgência para não entrar em dívidas.");
