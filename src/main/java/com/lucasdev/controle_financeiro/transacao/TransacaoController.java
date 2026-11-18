@@ -1,9 +1,15 @@
 package com.lucasdev.controle_financeiro.transacao;
 
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -23,9 +29,15 @@ public class TransacaoController {
         return service.criar(request);
  }
 
+
     @GetMapping
-    public List<TransacaoResponse> listar(){
-        return service.listarTodas();
+    public PagedModel<TransacaoResponse> listar(
+            @RequestParam(required = false) TipoTransacao tipo,
+            @RequestParam(required = false) Long categoriaId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
+            @PageableDefault(size = 20, sort = "data", direction = Sort.Direction.DESC) Pageable pageable) {
+        return new PagedModel<>(service.listar(tipo, categoriaId, inicio, fim, pageable));
     }
 
     @GetMapping("/{id}")

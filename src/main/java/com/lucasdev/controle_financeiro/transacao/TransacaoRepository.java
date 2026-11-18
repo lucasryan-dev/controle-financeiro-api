@@ -3,6 +3,7 @@ package com.lucasdev.controle_financeiro.transacao;
 import com.lucasdev.controle_financeiro.categoria.GrupoCategoria;
 import com.lucasdev.controle_financeiro.relatorio.TotalPorCategoria;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -10,7 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-public interface TransacaoRepository extends JpaRepository<Transacao, Long> {
+public interface TransacaoRepository extends JpaRepository<Transacao, Long>,
+                                            JpaSpecificationExecutor<Transacao> {
     boolean existsByCategoriaId(Long categoriaId);
     List<Transacao> id(Long id);
 

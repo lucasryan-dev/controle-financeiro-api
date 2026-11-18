@@ -3,9 +3,13 @@ package com.lucasdev.controle_financeiro.transacao;
 import com.lucasdev.controle_financeiro.categoria.Categoria;
 import com.lucasdev.controle_financeiro.categoria.CategoriaRepository;
 import com.lucasdev.controle_financeiro.exception.RecursoNaoEncontradoException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.time.LocalDate;
+
 
 @Service
 public class TransacaoService {
@@ -24,11 +28,18 @@ public class TransacaoService {
         return TransacaoResponse.from(salva);
     }
 
-    public List<TransacaoResponse> listarTodas(){
-        return repository.findAll()
-                .stream()
-                .map(TransacaoResponse::from)
-                .toList();
+    public Page<TransacaoResponse> listar(TipoTransacao tipo, Long categoriaId,
+                                          LocalDate inicio, LocalDate fim,
+                                          Pageable pageable) {
+        Specification<Transacao> filtros = Specification.allOf(
+                TransacaoSpecifications.comTipo(tipo),
+                TransacaoSpecifications.comCategoria(categoriaId),
+                TransacaoSpecifications.aPartirDe(inicio),
+                TransacaoSpecifications.ate(fim)
+        );
+
+        return repository.findAll(filtros, pageable)
+                .map(TransacaoResponse::from);
     }
 
     public TransacaoResponse buscar(Long id){
