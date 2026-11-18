@@ -94,7 +94,7 @@ src/main/java/com/lucasdev/controle_financeiro/
 - **Agrupamento no banco com projeção**: os gastos por categoria são somados com `GROUP BY` e já ordenados pelo banco. O resultado é convertido direto em objetos com `SELECT new` (projeção com construtor), e a Service só calcula os percentuais.
 - **Dicas geradas por regras de negócio**: as dicas não dependem de inteligência artificial, e sim de regras claras e testáveis na camada de serviço, baseadas na regra 50/30/20. A poupança é calculada como o saldo do mês, e cada grupo é representado pelo mesmo record (`IndicadorGrupo`), evitando campos repetidos.
 - **Cálculos monetários com `BigDecimal`**: percentuais com 2 casas decimais e arredondamento `HALF_UP`, multiplicando antes de dividir para não perder precisão. Meses sem receitas devolvem percentual `0` em vez de erro de divisão por zero.
-- **Testes unitários com mocks**: as regras de negócio dos relatórios e das dicas são testadas sem banco de dados, com o repositório substituído por mocks do Mockito. Os testes rodam em milissegundos e cobrem os casos de borda, como meses sem receitas e poupança negativa. Valores `BigDecimal` são comparados com `isEqualByComparingTo`, que ignora diferenças de escala.
+- **Testes unitários com mocks**: as regras de negócio dos relatórios, das dicas e das categorias são testadas sem banco de dados, com os repositórios substituídos por mocks do Mockito. Nos cenários de erro, os testes verificam também que nada foi salvo ou apagado (`verify(..., never())`). Os testes rodam em milissegundos e cobrem os casos de borda, como meses sem receitas e poupança negativa. Valores `BigDecimal` são comparados com `isEqualByComparingTo`, que ignora diferenças de escala.
 - **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais podem ser definidas por variáveis de ambiente, para que senhas reais nunca fiquem no código.
 
 ## 📌 Endpoints
@@ -432,7 +432,9 @@ Os valores padrão servem para desenvolvimento local. Em produção, defina as v
 mvnw.cmd test
 ```
 
-Os testes unitários cobrem as regras de negócio dos relatórios:
+Os testes unitários cobrem as regras de negócio dos relatórios e das categorias:
+
+**Relatórios e dicas**
 
 | Cenário testado | Garante que |
 |---|---|
@@ -442,6 +444,15 @@ Os testes unitários cobrem as regras de negócio dos relatórios:
 | Poupança abaixo de 20% | o app avisa que está poupando pouco |
 | Gastos maiores que a renda | o alerta de poupança negativa é gerado |
 | Renda zero | apenas a dica de cadastrar receitas é exibida |
+
+**Categorias**
+
+| Cenário testado | Garante que |
+|---|---|
+| Nome novo | a categoria é salva e devolvida com o id |
+| Nome repetido | a API recusa com `409` e nada é salvo no banco |
+| Excluir categoria em uso | a API recusa com `409` e a categoria não é apagada |
+| Excluir categoria inexistente | a API responde `404` e nada é apagado |
 
 > O teste `contextLoads`, gerado pelo Spring Initializr, sobe a aplicação completa e precisa do PostgreSQL rodando.
 
@@ -461,7 +472,8 @@ Os testes unitários cobrem as regras de negócio dos relatórios:
 - [x] Classificação das categorias em necessidade, desejo e renda
 - [x] Dicas de saúde financeira baseadas na regra 50/30/20
 - [x] Testes unitários dos relatórios e das dicas (JUnit, Mockito e AssertJ)
-- [ ] Testes unitários das regras de transações e categorias
+- [x] Testes unitários das regras de categorias
+- [ ] Testes unitários das regras de transações
 - [ ] Testes dos endpoints (MockMvc)
 - [ ] Documentação com Swagger/OpenAPI
 - [x] Banco de dados PostgreSQL
