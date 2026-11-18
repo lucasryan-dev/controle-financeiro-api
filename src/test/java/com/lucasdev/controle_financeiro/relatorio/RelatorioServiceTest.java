@@ -66,7 +66,7 @@ class RelatorioServiceTest {
                 .thenReturn(new BigDecimal("1000.00"));
 
 
-        DiscasResponse resposta = relatorioService.dicas(2026, 11);
+        DicasResponse resposta = relatorioService.dicas(2026, 11);
 
         assertThat(resposta.necessidades().percentual()).isEqualByComparingTo("45.00");
         assertThat(resposta.desejos().percentual()).isEqualByComparingTo("33.33");
@@ -91,7 +91,7 @@ class RelatorioServiceTest {
                 .thenReturn(new BigDecimal("1400.00"));
 
 
-        DiscasResponse resposta = relatorioService.dicas(2026, 11);
+        DicasResponse resposta = relatorioService.dicas(2026, 11);
 
         assertThat(resposta.poupanca().percentual()).isEqualByComparingTo("8.33");
         assertThat(resposta.dicas().get(2)).contains("menos que o recomendado");
@@ -110,7 +110,7 @@ class RelatorioServiceTest {
                 .thenReturn(new BigDecimal("1900.00"));
 
 
-        DiscasResponse resposta = relatorioService.dicas(2026, 11);
+        DicasResponse resposta = relatorioService.dicas(2026, 11);
 
         assertThat(resposta.poupanca().valor()).isEqualByComparingTo("-250.00");
         assertThat(resposta.dicas().get(2)).startsWith("Alerta");
@@ -128,7 +128,7 @@ class RelatorioServiceTest {
         when(transacaoRepository.somarPorGrupoEPeriodo(any(), eq(GrupoCategoria.DESEJO), any(), any()))
                 .thenReturn(new BigDecimal("200.00"));
 
-        DiscasResponse resposta = relatorioService.dicas(2026, 11);
+        DicasResponse resposta = relatorioService.dicas(2026, 11);
 
 
         assertThat(resposta.dicas()).hasSize(1);

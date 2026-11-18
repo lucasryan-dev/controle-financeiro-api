@@ -65,7 +65,7 @@ public class RelatorioService {
         return resposta;
     }
 
-    public DiscasResponse dicas(Integer ano, Integer mes){
+    public DicasResponse dicas(Integer ano, Integer mes){
         YearMonth periodo = YearMonth.of(ano, mes);
         LocalDate inicio = periodo.atDay(1);
         LocalDate fim = periodo.atEndOfMonth();
@@ -89,7 +89,7 @@ public class RelatorioService {
                 indicadorDesejos.percentual(),
                 indicadorPoupanca.percentual());
 
-        return new DiscasResponse(indicadorNecessidades, indicadorDesejos, indicadorPoupanca, dicas);
+        return new DicasResponse(indicadorNecessidades, indicadorDesejos, indicadorPoupanca, dicas);
     }
 
     private List<String> gerarDicas(BigDecimal renda,

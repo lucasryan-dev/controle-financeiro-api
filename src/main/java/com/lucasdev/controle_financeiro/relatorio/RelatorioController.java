@@ -29,8 +29,8 @@ public class RelatorioController {
     }
 
     @GetMapping("/dicas")
-    public DiscasResponse dicas(@RequestParam Integer ano,
-                                      @RequestParam Integer mes){
+    public DicasResponse dicas(@RequestParam Integer ano,
+                               @RequestParam Integer mes){
         return relatorioService.dicas(ano, mes);
 
     }
