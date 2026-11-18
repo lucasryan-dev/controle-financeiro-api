@@ -13,6 +13,7 @@ API REST para controle de finanças pessoais, desenvolvida com **Java e Spring B
 - **PostgreSQL**: banco de dados relacional
 - **Bean Validation**: validação dos dados de entrada
 - **Lombok**: redução de código repetitivo
+- **JUnit 5, Mockito e AssertJ**: testes automatizados
 - **Maven**: gerenciamento de dependências
 
 ## 📐 Arquitetura
@@ -62,6 +63,7 @@ src/main/java/com/lucasdev/controle_financeiro/
     ├── TransacaoRequest.java       # DTO de entrada, com validações
     ├── TransacaoResponse.java      # DTO de saída
     ├── TransacaoRepository.java    # acesso ao banco
+    ├── TransacaoSpecifications.java # filtros dinâmicos da listagem
     ├── TransacaoService.java       # regras de negócio
     └── TransacaoController.java    # endpoints REST
 ```
@@ -87,9 +89,12 @@ src/main/java/com/lucasdev/controle_financeiro/
 - **Exclusão de categoria bloqueada quando em uso**: em vez de apagar as transações junto (cascata) ou movê-las sem o usuário pedir, a API recusa a exclusão com `409 Conflict`. Assim o histórico financeiro nunca é perdido por acidente.
 - **Consultas derivadas do Spring Data**: métodos como `existsByNomeIgnoreCase`, `existsByNomeIgnoreCaseAndIdNot` e `existsByCategoriaId` geram o SQL a partir do nome, inclusive navegando pelo relacionamento entre entidades, sem consulta escrita à mão.
 - **Somas feitas no banco com JPQL**: os totais do relatório são calculados com `SUM` direto no banco, em vez de carregar todas as transações para a memória. As consultas usam parâmetros nomeados, o que protege contra SQL Injection, e `COALESCE` para devolver `0` em meses sem transações.
+- **Filtros dinâmicos com `Specification`**: cada filtro é uma peça independente, e só as peças informadas na requisição entram na consulta. Isso evita criar um método de consulta para cada combinação de filtros.
+- **Paginação na listagem**: as transações são devolvidas em páginas, ordenadas das mais recentes para as mais antigas, para a API continuar rápida mesmo com milhares de registros. A resposta usa `PagedModel`, o formato estável recomendado pelo Spring Data.
 - **Agrupamento no banco com projeção**: os gastos por categoria são somados com `GROUP BY` e já ordenados pelo banco. O resultado é convertido direto em objetos com `SELECT new` (projeção com construtor), e a Service só calcula os percentuais.
 - **Dicas geradas por regras de negócio**: as dicas não dependem de inteligência artificial, e sim de regras claras e testáveis na camada de serviço, baseadas na regra 50/30/20. A poupança é calculada como o saldo do mês, e cada grupo é representado pelo mesmo record (`IndicadorGrupo`), evitando campos repetidos.
 - **Cálculos monetários com `BigDecimal`**: percentuais com 2 casas decimais e arredondamento `HALF_UP`, multiplicando antes de dividir para não perder precisão. Meses sem receitas devolvem percentual `0` em vez de erro de divisão por zero.
+- **Testes unitários com mocks**: as regras de negócio dos relatórios e das dicas são testadas sem banco de dados, com o repositório substituído por mocks do Mockito. Os testes rodam em milissegundos e cobrem os casos de borda, como meses sem receitas e poupança negativa. Valores `BigDecimal` são comparados com `isEqualByComparingTo`, que ignora diferenças de escala.
 - **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais podem ser definidas por variáveis de ambiente, para que senhas reais nunca fiquem no código.
 
 ## 📌 Endpoints
@@ -97,7 +102,7 @@ src/main/java/com/lucasdev/controle_financeiro/
 | Método | Endpoint | Descrição | Sucesso | Erros |
 |---|---|---|---|---|
 | `POST` | `/transacoes` | Cadastra uma transação | `201 Created` | `400`, `404` |
-| `GET` | `/transacoes` | Lista todas as transações | `200 OK` | |
+| `GET` | `/transacoes` | Lista as transações, com filtros e paginação | `200 OK` | `400` |
 | `GET` | `/transacoes/{id}` | Busca uma transação pelo id | `200 OK` | `404` |
 | `PUT` | `/transacoes/{id}` | Atualiza uma transação | `200 OK` | `400`, `404` |
 | `DELETE` | `/transacoes/{id}` | Exclui uma transação | `204 No Content` | `404` |
@@ -254,6 +259,36 @@ Content-Type: application/json
 
 A transação recebe o **id** de uma categoria existente (consulte os ids em `GET /categorias`) e a resposta traz a categoria completa, com id, nome e grupo.
 
+### Listagem com filtros e paginação
+
+Todos os filtros são opcionais e podem ser combinados:
+
+| Parâmetro | Exemplo | Filtra por |
+|---|---|---|
+| `tipo` | `DESPESA` | receitas ou despesas |
+| `categoriaId` | `1` | uma categoria |
+| `inicio` | `2026-11-01` | transações a partir desta data |
+| `fim` | `2026-11-30` | transações até esta data |
+| `page` | `0` | número da página (começa em 0) |
+| `size` | `20` | itens por página (padrão: 20) |
+| `sort` | `valor,desc` | ordenação (padrão: `data,desc`, as mais recentes primeiro) |
+
+**Exemplo**
+```http
+GET /transacoes?tipo=DESPESA&inicio=2026-11-01&fim=2026-11-30&size=2
+```
+
+**Resposta** `200 OK`
+```json
+{
+  "content": [
+    { "id": 5, "descricao": "Presentes", "valor": 400.00, "tipo": "DESPESA", "categoria": { "id": 8, "nome": "Outros", "grupo": "DESEJO" }, "data": "2026-11-20" },
+    { "id": 4, "descricao": "Cinema e restaurante", "valor": 600.00, "tipo": "DESPESA", "categoria": { "id": 6, "nome": "Lazer", "grupo": "DESEJO" }, "data": "2026-11-15" }
+  ],
+  "page": { "size": 2, "number": 0, "totalElements": 4, "totalPages": 2 }
+}
+```
+
 ### Regras de validação
 
 | Campo | Regras |
@@ -387,6 +422,29 @@ A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro client
 
 Os valores padrão servem para desenvolvimento local. Em produção, defina as variáveis com credenciais seguras.
 
+## 🧪 Testes
+
+```bash
+# Linux/Mac
+./mvnw test
+
+# Windows
+mvnw.cmd test
+```
+
+Os testes unitários cobrem as regras de negócio dos relatórios:
+
+| Cenário testado | Garante que |
+|---|---|
+| Resumo do mês | saldo e percentual gasto são calculados corretamente |
+| Mês sem receitas | o percentual é `0`, sem erro de divisão por zero |
+| Desejos acima de 30% | a dica de alerta dos desejos é gerada |
+| Poupança abaixo de 20% | o app avisa que está poupando pouco |
+| Gastos maiores que a renda | o alerta de poupança negativa é gerado |
+| Renda zero | apenas a dica de cadastrar receitas é exibida |
+
+> O teste `contextLoads`, gerado pelo Spring Initializr, sobe a aplicação completa e precisa do PostgreSQL rodando.
+
 ## 🗺️ Roadmap
 
 - [x] Entidade `Transacao` com persistência via JPA
@@ -399,10 +457,12 @@ Os valores padrão servem para desenvolvimento local. Em produção, defina as v
 - [x] Renomear e excluir categorias (bloqueando a exclusão de categorias em uso)
 - [x] Relatório: resumo do mês (receitas, despesas, saldo e percentual gasto)
 - [x] Relatório: gastos por categoria
-- [ ] Filtros por período, tipo e categoria, com paginação
+- [x] Filtros por período, tipo e categoria, com paginação
 - [x] Classificação das categorias em necessidade, desejo e renda
 - [x] Dicas de saúde financeira baseadas na regra 50/30/20
-- [ ] Testes automatizados (JUnit, Mockito e MockMvc)
+- [x] Testes unitários dos relatórios e das dicas (JUnit, Mockito e AssertJ)
+- [ ] Testes unitários das regras de transações e categorias
+- [ ] Testes dos endpoints (MockMvc)
 - [ ] Documentação com Swagger/OpenAPI
 - [x] Banco de dados PostgreSQL
 - [ ] Migrations com Flyway
