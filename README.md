@@ -15,6 +15,7 @@ API REST para controle de finanças pessoais, desenvolvida com **Java e Spring B
 - **Lombok**: redução de código repetitivo
 - **JUnit 5, Mockito e AssertJ**: testes automatizados
 - **Maven**: gerenciamento de dependências
+- **Docker e Docker Compose**: containerização da aplicação e do banco
 
 ## 📐 Arquitetura
 
@@ -68,6 +69,8 @@ src/main/java/com/lucasdev/controle_financeiro/
     └── TransacaoController.java    # endpoints REST
 ```
 
+Na raiz do projeto ficam também o `Dockerfile` (imagem da aplicação), o `docker-compose.yml` (aplicação + PostgreSQL) e o `.dockerignore`.
+
 ### Decisões técnicas
 
 - **`BigDecimal` para valores monetários**: evita os erros de arredondamento do `double` (ex.: `0.1 + 0.2 = 0.30000000000000004`).
@@ -95,6 +98,8 @@ src/main/java/com/lucasdev/controle_financeiro/
 - **Dicas geradas por regras de negócio**: as dicas não dependem de inteligência artificial, e sim de regras claras e testáveis na camada de serviço, baseadas na regra 50/30/20. A poupança é calculada como o saldo do mês, e cada grupo é representado pelo mesmo record (`IndicadorGrupo`), evitando campos repetidos.
 - **Cálculos monetários com `BigDecimal`**: percentuais com 2 casas decimais e arredondamento `HALF_UP`, multiplicando antes de dividir para não perder precisão. Meses sem receitas devolvem percentual `0` em vez de erro de divisão por zero.
 - **Testes unitários com mocks**: as regras de negócio dos relatórios, das dicas e das categorias são testadas sem banco de dados, com os repositórios substituídos por mocks do Mockito. Nos cenários de erro, os testes verificam também que nada foi salvo ou apagado (`verify(..., never())`). Os testes rodam em milissegundos e cobrem os casos de borda, como meses sem receitas e poupança negativa. Valores `BigDecimal` são comparados com `isEqualByComparingTo`, que ignora diferenças de escala.
+- **Docker com multi-stage build**: a imagem é montada em duas etapas. A primeira compila o projeto com Maven e o JDK completo; a segunda roda só o `.jar` sobre uma imagem com o JRE, menor e com menos coisas instaladas. O `pom.xml` é copiado antes do código para aproveitar o cache do Docker e não baixar as dependências a cada mudança.
+- **Docker Compose com healthcheck e volume**: a API só sobe depois que o PostgreSQL responde ao `pg_isready`, e os dados ficam em um volume, sobrevivendo à remoção dos containers. Dentro da rede do Compose, a API encontra o banco pelo nome do serviço (`db`).
 - **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais podem ser definidas por variáveis de ambiente, para que senhas reais nunca fiquem no código.
 
 ## 📌 Endpoints
@@ -382,9 +387,35 @@ Por exemplo, `GET /relatorios/resumo?ano=2026&mes=13`, sem o `mes` ou com `mes=a
 
 ## ▶️ Como rodar
 
+### Opção 1: com Docker (recomendado)
+
+**Pré-requisitos:** Git e Docker. Não é preciso instalar Java nem PostgreSQL.
+
+```bash
+git clone https://github.com/lucasryan-dev/controle-financeiro-api.git
+cd controle-financeiro-api
+docker compose up --build
+```
+
+Esse comando sobe dois containers:
+
+| Container | O que é | Porta |
+|---|---|---|
+| `controle-financeiro-db` | PostgreSQL 16, com o banco e o usuário já criados | `5432` |
+| `controle-financeiro-api` | a aplicação, compilada dentro do Docker | `8080` |
+
+A API só inicia depois que o banco está pronto para receber conexões. Os dados ficam guardados em um volume do Docker e continuam lá mesmo depois de parar os containers.
+
+```bash
+docker compose down      # para os containers e mantém os dados
+docker compose down -v   # para os containers e apaga os dados
+```
+
+### Opção 2: sem Docker
+
 **Pré-requisitos:** Java 21+, Git e PostgreSQL. O Maven não precisa estar instalado, porque o projeto usa o Maven Wrapper.
 
-### 1. Criar o banco de dados
+**1. Criar o banco de dados**
 
 ```bash
 sudo -u postgres psql
@@ -397,19 +428,20 @@ CREATE DATABASE controle_financeiro OWNER financeiro;
 
 As tabelas são criadas automaticamente pela aplicação na primeira execução.
 
-### 2. Rodar a aplicação
+**2. Rodar a aplicação**
 
 ```bash
-# clonar o repositório
 git clone https://github.com/lucasryan-dev/controle-financeiro-api.git
 cd controle-financeiro-api
 
-# rodar a aplicação (Linux/Mac)
+# Linux/Mac
 ./mvnw spring-boot:run
 
-# rodar a aplicação (Windows)
+# Windows
 mvnw.cmd spring-boot:run
 ```
+
+> Também é possível subir só o banco com Docker (`docker compose up db`) e rodar a aplicação pela IDE.
 
 A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro cliente HTTP para testar os endpoints.
 
@@ -417,10 +449,11 @@ A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro client
 
 | Variável | Padrão | Descrição |
 |---|---|---|
+| `DB_URL` | `jdbc:postgresql://localhost:5432/controle_financeiro` | endereço do banco |
 | `DB_USERNAME` | `financeiro` | usuário do banco |
 | `DB_PASSWORD` | `financeiro` | senha do banco |
 
-Os valores padrão servem para desenvolvimento local. Em produção, defina as variáveis com credenciais seguras.
+Os valores padrão servem para desenvolvimento local. No Docker Compose, a aplicação usa `DB_URL` apontando para o serviço `db`. Em produção, defina as variáveis com credenciais seguras.
 
 ## 🧪 Testes
 
@@ -478,7 +511,7 @@ Os testes unitários cobrem as regras de negócio dos relatórios e das categori
 - [ ] Documentação com Swagger/OpenAPI
 - [x] Banco de dados PostgreSQL
 - [ ] Migrations com Flyway
-- [ ] Docker e docker-compose
+- [x] Docker e Docker Compose
 - [ ] Autenticação com JWT (Spring Security)
 - [ ] Dicas personalizadas com IA (Spring AI), usando as regras atuais como base e sem enviar dados pessoais
 
