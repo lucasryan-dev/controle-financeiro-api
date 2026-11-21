@@ -1,6 +1,6 @@
 # 💰 Controle Financeiro API
 
-API REST para controle de finanças pessoais, desenvolvida com **Java e Spring Boot**. Com ela você registra receitas e despesas, organiza os gastos em categorias, acompanha relatórios do mês e recebe **dicas para melhorar sua saúde financeira**, baseadas na regra 50/30/20.
+API REST para controle de finanças pessoais, desenvolvida com **Java e Spring Boot**. Cada usuário cria sua conta, faz login com JWT e, com acesso apenas aos próprios dados, registra receitas e despesas, organiza os gastos em categorias, acompanha relatórios do mês e recebe **dicas para melhorar sua saúde financeira**, baseadas na regra 50/30/20.
 
 > 🚧 **Projeto em desenvolvimento.** Estou construindo esta API em etapas para estudar e praticar desenvolvimento back-end. Acompanhe a evolução no [roadmap](#️-roadmap) e no histórico de commits.
 
@@ -11,6 +11,7 @@ API REST para controle de finanças pessoais, desenvolvida com **Java e Spring B
 - **Spring Web**: API REST
 - **Spring Data JPA / Hibernate**: persistência de dados
 - **PostgreSQL**: banco de dados relacional
+- **Spring Security e OAuth2 Resource Server**: autenticação com JWT
 - **Bean Validation**: validação dos dados de entrada
 - **Lombok**: redução de código repetitivo
 - **JUnit 5, Mockito e AssertJ**: testes automatizados
@@ -22,7 +23,9 @@ API REST para controle de finanças pessoais, desenvolvida com **Java e Spring B
 O projeto segue a arquitetura em camadas, organizado por funcionalidade:
 
 ```
-Requisição HTTP (JSON)
+Requisição HTTP (JSON) + token JWT
+      ↓
+ Spring Security → valida o token e identifica o usuário
       ↓
  Controller   → recebe a requisição, valida o DTO e devolve a resposta
       ↓
@@ -36,6 +39,13 @@ Requisição HTTP (JSON)
 
 ```
 src/main/java/com/lucasdev/controle_financeiro/
+├── auth/
+│   ├── SecurityConfig.java                  # regras de acesso, BCrypt e chaves do JWT
+│   ├── AuthController.java                  # endpoints de cadastro e login
+│   ├── AuthService.java                     # cadastro e verificação de credenciais
+│   ├── TokenService.java                    # geração do token JWT
+│   ├── RegistroRequest.java / LoginRequest.java
+│   └── UsuarioResponse.java / TokenResponse.java
 ├── categoria/
 │   ├── Categoria.java                       # entidade JPA
 │   ├── GrupoCategoria.java                  # enum: NECESSIDADE, DESEJO, RENDA
@@ -44,9 +54,10 @@ src/main/java/com/lucasdev/controle_financeiro/
 │   ├── CategoriaRepository.java             # acesso ao banco
 │   ├── CategoriaService.java                # regras de negócio
 │   ├── CategoriaController.java             # endpoints REST
-│   └── CategoriaSeeder.java                 # cadastra as categorias iniciais
+│   └── CategoriasIniciais.java              # cria as categorias padrão de cada novo usuário
 ├── exception/
 │   ├── ConflitoException.java               # exceção de dado duplicado (409)
+│   ├── CredenciaisInvalidasException.java   # login com e-mail ou senha errados (401)
 │   ├── ErroResponse.java                    # formato padrão das respostas de erro
 │   ├── RecursoNaoEncontradoException.java   # exceção de recurso inexistente (404)
 │   └── GlobalExceptionHandler.java          # tratamento global de erros
@@ -67,6 +78,9 @@ src/main/java/com/lucasdev/controle_financeiro/
     ├── TransacaoSpecifications.java # filtros dinâmicos da listagem
     ├── TransacaoService.java       # regras de negócio
     └── TransacaoController.java    # endpoints REST
+└── usuario/
+    ├── Usuario.java                # entidade JPA (senha guardada como hash)
+    └── UsuarioRepository.java      # acesso ao banco
 ```
 
 Na raiz do projeto ficam também o `Dockerfile` (imagem da aplicação), o `docker-compose.yml` (aplicação + PostgreSQL) e o `.dockerignore`.
@@ -87,7 +101,13 @@ Na raiz do projeto ficam também o `Dockerfile` (imagem da aplicação), o `dock
 - **Carregamento `LAZY` no relacionamento**: a categoria só é buscada no banco quando é usada, evitando consultas desnecessárias.
 - **Grupo na categoria, e não na transação**: classificar cada categoria como necessidade, desejo ou renda uma única vez evita que o usuário precise classificar cada gasto. A categoria "Outros" é tratada como desejo, a opção mais cautelosa.
 - **Reaproveitamento de DTOs**: a resposta de transação usa o `CategoriaResponse`, então qualquer campo novo da categoria, como o grupo, aparece automaticamente nas transações.
-- **Categorias iniciais com seeder idempotente**: ao subir, a aplicação cadastra as categorias padrão apenas se a tabela estiver vazia. Rodar uma ou várias vezes produz o mesmo resultado.
+- **Autenticação stateless com JWT**: o login devolve um token assinado com HS256, válido por 2 horas, que acompanha cada requisição no cabeçalho `Authorization`. O servidor não guarda sessão, e a validação usa o suporte oficial do Spring Security (OAuth2 Resource Server), sem filtro escrito à mão. O CSRF fica desligado porque a API não usa cookies.
+- **Senhas com BCrypt**: só o hash da senha é guardado no banco, e ela nunca aparece nas respostas da API.
+- **Mensagem genérica no login**: e-mail inexistente e senha errada recebem a mesma resposta (`401`), para não revelar quais e-mails têm conta.
+- **Dados isolados por usuário**: transações e categorias têm um dono (`usuario_id`). O id do usuário vem do token assinado, e não da URL, então não pode ser forjado. Todas as consultas filtram pelo dono.
+- **404 em vez de 403 para dados de outro usuário**: tentar acessar a transação ou a categoria de outra pessoa responde "não encontrada", sem confirmar que o registro existe.
+- **Categorias por usuário**: cada conta nasce com as 8 categorias padrão e pode renomear, excluir e criar as suas. O nome é único por usuário (restrição única composta em `usuario_id` + `nome`).
+- **Cadastro transacional**: o usuário e suas categorias iniciais são salvos em uma única transação (`@Transactional`). Se algo falhar, nada fica salvo pela metade.
 - **Nomes de categoria únicos**: a regra é garantida em duas camadas. A Service verifica antes de salvar, sem diferenciar maiúsculas e minúsculas, e responde `409 Conflict`; o banco também tem uma constraint `UNIQUE` como proteção final.
 - **Exclusão de categoria bloqueada quando em uso**: em vez de apagar as transações junto (cascata) ou movê-las sem o usuário pedir, a API recusa a exclusão com `409 Conflict`. Assim o histórico financeiro nunca é perdido por acidente.
 - **Consultas derivadas do Spring Data**: métodos como `existsByNomeIgnoreCase`, `existsByNomeIgnoreCaseAndIdNot` e `existsByCategoriaId` geram o SQL a partir do nome, inclusive navegando pelo relacionamento entre entidades, sem consulta escrita à mão.
@@ -97,12 +117,48 @@ Na raiz do projeto ficam também o `Dockerfile` (imagem da aplicação), o `dock
 - **Agrupamento no banco com projeção**: os gastos por categoria são somados com `GROUP BY` e já ordenados pelo banco. O resultado é convertido direto em objetos com `SELECT new` (projeção com construtor), e a Service só calcula os percentuais.
 - **Dicas geradas por regras de negócio**: as dicas não dependem de inteligência artificial, e sim de regras claras e testáveis na camada de serviço, baseadas na regra 50/30/20. A poupança é calculada como o saldo do mês, e cada grupo é representado pelo mesmo record (`IndicadorGrupo`), evitando campos repetidos.
 - **Cálculos monetários com `BigDecimal`**: percentuais com 2 casas decimais e arredondamento `HALF_UP`, multiplicando antes de dividir para não perder precisão. Meses sem receitas devolvem percentual `0` em vez de erro de divisão por zero.
-- **Testes unitários com mocks**: as regras de negócio dos relatórios, das dicas e das categorias são testadas sem banco de dados, com os repositórios substituídos por mocks do Mockito. Nos cenários de erro, os testes verificam também que nada foi salvo ou apagado (`verify(..., never())`). Os testes rodam em milissegundos e cobrem os casos de borda, como meses sem receitas e poupança negativa. Valores `BigDecimal` são comparados com `isEqualByComparingTo`, que ignora diferenças de escala.
+- **Testes unitários com mocks**: as regras de negócio dos relatórios, das dicas, das categorias e das transações são testadas sem banco de dados, com os repositórios substituídos por mocks do Mockito. Nos cenários de erro, os testes verificam também que nada foi salvo ou apagado (`verify(..., never())`). Os testes rodam em milissegundos e cobrem os casos de borda, como meses sem receitas e poupança negativa. Valores `BigDecimal` são comparados com `isEqualByComparingTo`, que ignora diferenças de escala.
 - **Docker com multi-stage build**: a imagem é montada em duas etapas. A primeira compila o projeto com Maven e o JDK completo; a segunda roda só o `.jar` sobre uma imagem com o JRE, menor e com menos coisas instaladas. O `pom.xml` é copiado antes do código para aproveitar o cache do Docker e não baixar as dependências a cada mudança.
 - **Docker Compose com healthcheck e volume**: a API só sobe depois que o PostgreSQL responde ao `pg_isready`, e os dados ficam em um volume, sobrevivendo à remoção dos containers. Dentro da rede do Compose, a API encontra o banco pelo nome do serviço (`db`).
-- **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais podem ser definidas por variáveis de ambiente, para que senhas reais nunca fiquem no código.
+- **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais e a chave do JWT podem ser definidas por variáveis de ambiente, para que segredos reais nunca fiquem no código.
 
 ## 📌 Endpoints
+
+### 🔐 Autenticação
+
+| Método | Endpoint | Descrição | Sucesso | Erros |
+|---|---|---|---|---|
+| `POST` | `/auth/registro` | Cria uma conta | `201 Created` | `400`, `409` |
+| `POST` | `/auth/login` | Faz login e devolve o token | `200 OK` | `400`, `401` |
+
+**Cadastro** `POST /auth/registro`
+```json
+{ "nome": "Ana", "email": "ana@email.com", "senha": "senhadaana123" }
+```
+
+**Login** `POST /auth/login`
+```json
+{ "email": "ana@email.com", "senha": "senhadaana123" }
+```
+
+**Resposta** `200 OK`
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "tipo": "Bearer",
+  "expiraEm": "2026-11-21T19:30:00Z"
+}
+```
+
+Todos os outros endpoints exigem o token no cabeçalho:
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+Sem token, ou com um token inválido ou expirado, a resposta é `401 Unauthorized`. Cada usuário só enxerga e altera as **próprias** transações e categorias.
+
+### Transações, categorias e relatórios
 
 | Método | Endpoint | Descrição | Sucesso | Erros |
 |---|---|---|---|---|
@@ -206,7 +262,7 @@ Cada categoria pertence a um **grupo**, usado nas dicas de saúde financeira (re
 | `DESEJO` | gastos que podem ser reduzidos |
 | `RENDA` | categorias de receita, que não entram na conta dos gastos |
 
-Na primeira execução, a aplicação cadastra automaticamente:
+Cada nova conta já nasce com estas categorias, que pertencem só àquele usuário:
 
 | Categoria | Grupo |
 |---|---|
@@ -214,7 +270,7 @@ Na primeira execução, a aplicação cadastra automaticamente:
 | Lazer, Outros | `DESEJO` |
 | Salário | `RENDA` |
 
-Novas categorias podem ser criadas pelo endpoint `POST /categorias`.
+O usuário pode criar novas categorias pelo endpoint `POST /categorias`, além de renomear e excluir as suas.
 
 **Exemplo** `POST /categorias`
 ```json
@@ -226,7 +282,7 @@ Novas categorias podem ser criadas pelo endpoint `POST /categorias`.
 { "id": 9, "nome": "Pet", "grupo": "NECESSIDADE" }
 ```
 
-O nome é obrigatório, tem no máximo 50 caracteres e não pode se repetir, sem diferenciar maiúsculas e minúsculas: se "Pet" já existe, "pet" é recusado com `409 Conflict`. O grupo também é obrigatório.
+O nome é obrigatório, tem no máximo 50 caracteres e não pode se repetir **entre as categorias do mesmo usuário**, sem diferenciar maiúsculas e minúsculas: se ele já tem "Pet", "pet" é recusado com `409 Conflict`. Usuários diferentes podem ter categorias com o mesmo nome. O grupo também é obrigatório.
 
 **Regras para renomear e excluir:**
 - Ao renomear, a verificação de nome repetido ignora a própria categoria: "Lazer" pode virar "LAZER".
@@ -301,7 +357,7 @@ GET /transacoes?tipo=DESPESA&inicio=2026-11-01&fim=2026-11-30&size=2
 | `descricao` | obrigatória, até 100 caracteres |
 | `valor` | obrigatório, maior que zero, no máximo 2 casas decimais |
 | `tipo` | obrigatório: `RECEITA` ou `DESPESA` |
-| `categoriaId` | obrigatório, id de uma categoria existente (senão, `404 Not Found`) |
+| `categoriaId` | obrigatório, id de uma categoria **do próprio usuário** (senão, `404 Not Found`) |
 | `data` | obrigatória, no formato `AAAA-MM-DD` |
 
 Requisições que não seguem essas regras recebem `400 Bad Request`.
@@ -345,7 +401,17 @@ Por exemplo, `GET /relatorios/resumo?ano=2026&mes=13`, sem o `mes` ou com `mes=a
 }
 ```
 
-**Transação ou categoria não encontrada** `404 Not Found`
+**E-mail ou senha inválidos** `401 Unauthorized`
+```json
+{
+  "status": 401,
+  "mensagem": "E-mail ou senha inválidos",
+  "campos": null,
+  "timestamp": "2026-11-21T17:20:12.410"
+}
+```
+
+**Transação ou categoria não encontrada, ou de outro usuário** `404 Not Found`
 ```json
 {
   "status": 404,
@@ -452,8 +518,9 @@ A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro client
 | `DB_URL` | `jdbc:postgresql://localhost:5432/controle_financeiro` | endereço do banco |
 | `DB_USERNAME` | `financeiro` | usuário do banco |
 | `DB_PASSWORD` | `financeiro` | senha do banco |
+| `JWT_SECRET` | chave de desenvolvimento | chave que assina os tokens (mínimo de 32 caracteres) |
 
-Os valores padrão servem para desenvolvimento local. No Docker Compose, a aplicação usa `DB_URL` apontando para o serviço `db`. Em produção, defina as variáveis com credenciais seguras.
+Os valores padrão servem para desenvolvimento local. No Docker Compose, a aplicação usa `DB_URL` apontando para o serviço `db`. Em produção, defina as variáveis com credenciais seguras, principalmente a `JWT_SECRET`: quem tem a chave consegue gerar tokens válidos.
 
 ## 🧪 Testes
 
@@ -465,7 +532,7 @@ Os valores padrão servem para desenvolvimento local. No Docker Compose, a aplic
 mvnw.cmd test
 ```
 
-Os testes unitários cobrem as regras de negócio dos relatórios e das categorias:
+Os testes unitários cobrem as regras de negócio dos relatórios, das categorias e das transações:
 
 **Relatórios e dicas**
 
@@ -487,6 +554,16 @@ Os testes unitários cobrem as regras de negócio dos relatórios e das categori
 | Excluir categoria em uso | a API recusa com `409` e a categoria não é apagada |
 | Excluir categoria inexistente | a API responde `404` e nada é apagado |
 
+**Transações**
+
+| Cenário testado | Garante que |
+|---|---|
+| Criar com categoria do usuário | a transação é salva com a categoria e devolvida com o id |
+| Criar com categoria inexistente | a API responde `404` e nada é salvo |
+| Criar com categoria de outro usuário | a API responde `404` e nada é salvo |
+| Buscar transação inexistente | a API responde `404` |
+| Atualizar | os dados mudam, mas o id da transação é mantido |
+
 > O teste `contextLoads`, gerado pelo Spring Initializr, sobe a aplicação completa e precisa do PostgreSQL rodando.
 
 ## 🗺️ Roadmap
@@ -506,13 +583,14 @@ Os testes unitários cobrem as regras de negócio dos relatórios e das categori
 - [x] Dicas de saúde financeira baseadas na regra 50/30/20
 - [x] Testes unitários dos relatórios e das dicas (JUnit, Mockito e AssertJ)
 - [x] Testes unitários das regras de categorias
-- [ ] Testes unitários das regras de transações
+- [x] Testes unitários das regras de transações
 - [ ] Testes dos endpoints (MockMvc)
 - [ ] Documentação com Swagger/OpenAPI
 - [x] Banco de dados PostgreSQL
 - [ ] Migrations com Flyway
 - [x] Docker e Docker Compose
-- [ ] Autenticação com JWT (Spring Security)
+- [x] Autenticação com JWT (Spring Security), com cadastro e login
+- [x] Dados isolados por usuário, incluindo categorias próprias
 - [ ] Dicas personalizadas com IA (Spring AI), usando as regras atuais como base e sem enviar dados pessoais
 
 ## 👤 Autor
