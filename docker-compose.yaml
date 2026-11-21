@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
     container_name: controle-financeiro-db
     environment:
       POSTGRES_DB: controle_financeiro

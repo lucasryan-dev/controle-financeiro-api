@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface TransacaoRepository extends JpaRepository<Transacao, Long>,
                                             JpaSpecificationExecutor<Transacao> {
@@ -19,10 +20,12 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long>,
     @Query("""
         SELECT COALESCE(SUM(t.valor), 0)
         FROM Transacao t
-        WHERE t.tipo = :tipo
+        WHERE t.usuario.id = :usuarioId
+          AND t.tipo = :tipo
           AND t.data BETWEEN :inicio AND :fim
         """)
-    BigDecimal somarPorTipoEPeriodo(@Param("tipo") TipoTransacao tipo,
+    BigDecimal somarPorTipoEPeriodo(@Param("usuarioId") Long usuarioId,
+                                    @Param("tipo") TipoTransacao tipo,
                                     @Param("inicio") LocalDate inicio,
                                     @Param("fim") LocalDate fim);
 
@@ -30,27 +33,31 @@ public interface TransacaoRepository extends JpaRepository<Transacao, Long>,
         SELECT new com.lucasdev.controle_financeiro.relatorio.TotalPorCategoria(c.nome, SUM(t.valor))
         FROM Transacao t
         JOIN t.categoria c
-        WHERE t.tipo = :tipo
+        WHERE t.usuario.id = :usuarioId
+          AND t.tipo = :tipo
           AND t.data BETWEEN :inicio AND :fim
         GROUP BY c.nome
         ORDER BY SUM(t.valor) DESC
         """)
-    List<TotalPorCategoria> somarPorCategoria(@Param("tipo") TipoTransacao tipo,
+    List<TotalPorCategoria> somarPorCategoria(@Param("usuarioId") Long usuarioId,
+                                              @Param("tipo") TipoTransacao tipo,
                                               @Param("inicio") LocalDate inicio,
                                               @Param("fim") LocalDate fim);
-
-    TipoTransacao Tipo(TipoTransacao tipo);
 
     @Query("""
         SELECT COALESCE(SUM(t.valor), 0)
         FROM Transacao t
         JOIN t.categoria c
-        WHERE t.tipo = :tipo
+        WHERE t.usuario.id = :usuarioId
+          AND t.tipo = :tipo
           AND c.grupo = :grupo
           AND t.data BETWEEN :inicio AND :fim
         """)
-    BigDecimal somarPorGrupoEPeriodo(@Param("tipo") TipoTransacao tipo,
+    BigDecimal somarPorGrupoEPeriodo(@Param("usuarioId") Long usuarioId,
+                                     @Param("tipo") TipoTransacao tipo,
                                      @Param("grupo") GrupoCategoria grupo,
                                      @Param("inicio") LocalDate inicio,
                                      @Param("fim") LocalDate fim);
+
+    Optional<Transacao> findByIdAndUsuarioId(Long id, Long usuarioId);
 }

@@ -25,4 +25,8 @@ public class TransacaoSpecifications {
         return (root, query, cb) ->
                 fim == null ? null : cb.lessThanOrEqualTo(root.get("data"), fim);
     }
+
+    public static Specification<Transacao> doUsuario(Long usuarioId) {
+        return (root, query, cb) -> cb.equal(root.get("usuario").get("id"), usuarioId);
+    }
 }

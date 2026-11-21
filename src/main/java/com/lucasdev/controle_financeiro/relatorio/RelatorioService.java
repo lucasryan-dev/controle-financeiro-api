@@ -20,14 +20,17 @@ public class RelatorioService {
         this.transacaoRepository = transacaoRepository;
     }
 
-    public ResumoMensalResponse resumoMensal(Integer ano, Integer mes) {
+    public ResumoMensalResponse resumoMensal(Integer ano, Integer mes, Long usuarioId) {
         YearMonth periodo = YearMonth.of(ano, mes);
         LocalDate inicio = periodo.atDay(1);
         LocalDate fim = periodo.atEndOfMonth();
 
+
         BigDecimal receitas = transacaoRepository
-                .somarPorTipoEPeriodo(TipoTransacao.RECEITA, inicio, fim);
-        BigDecimal despesas = transacaoRepository.somarPorTipoEPeriodo(TipoTransacao.DESPESA, inicio, fim);
+                .somarPorTipoEPeriodo(usuarioId, TipoTransacao.RECEITA, inicio, fim);
+        BigDecimal despesas = transacaoRepository
+                .somarPorTipoEPeriodo(usuarioId, TipoTransacao.DESPESA, inicio, fim);
+
 
         BigDecimal saldo = receitas.subtract(despesas);
         BigDecimal percentualGasto = calcularPercentual(despesas, receitas);
@@ -45,16 +48,16 @@ public class RelatorioService {
         return resultado;
     }
 
-    public List<GastoPorCategoriaResponse> gastosPorCategoria(Integer ano, Integer mes){
+    public List<GastoPorCategoriaResponse> gastosPorCategoria(Integer ano, Integer mes, Long usuarioId){
         YearMonth periodo = YearMonth.of(ano, mes);
         LocalDate inicio = periodo.atDay(1);
         LocalDate fim = periodo.atEndOfMonth();
 
         List<TotalPorCategoria> totais = transacaoRepository
-                .somarPorCategoria(TipoTransacao.DESPESA, inicio, fim);
+                .somarPorCategoria(usuarioId, TipoTransacao.DESPESA, inicio, fim);
 
         BigDecimal totalGeral = transacaoRepository
-                .somarPorTipoEPeriodo(TipoTransacao.DESPESA, inicio, fim);
+                .somarPorTipoEPeriodo(usuarioId, TipoTransacao.DESPESA, inicio, fim);
 
         List<GastoPorCategoriaResponse> resposta = new ArrayList<>();
         for (TotalPorCategoria item : totais){
@@ -65,17 +68,19 @@ public class RelatorioService {
         return resposta;
     }
 
-    public DicasResponse dicas(Integer ano, Integer mes){
+    public DicasResponse dicas(Integer ano, Integer mes, Long usuarioId){
         YearMonth periodo = YearMonth.of(ano, mes);
         LocalDate inicio = periodo.atDay(1);
         LocalDate fim = periodo.atEndOfMonth();
 
-        BigDecimal renda = transacaoRepository.somarPorTipoEPeriodo(TipoTransacao.RECEITA, inicio, fim);
-        BigDecimal totalDespesas = transacaoRepository.somarPorTipoEPeriodo(TipoTransacao.DESPESA, inicio, fim);
+        BigDecimal renda = transacaoRepository
+                .somarPorTipoEPeriodo(usuarioId, TipoTransacao.RECEITA, inicio, fim);
+        BigDecimal totalDespesas = transacaoRepository
+                .somarPorTipoEPeriodo(usuarioId, TipoTransacao.DESPESA, inicio, fim);
         BigDecimal necessidades = transacaoRepository
-                .somarPorGrupoEPeriodo(TipoTransacao.DESPESA, GrupoCategoria.NECESSIDADE, inicio, fim);
-        BigDecimal desejos =  transacaoRepository
-                .somarPorGrupoEPeriodo(TipoTransacao.DESPESA, GrupoCategoria.DESEJO, inicio, fim);
+                .somarPorGrupoEPeriodo(usuarioId, TipoTransacao.DESPESA, GrupoCategoria.NECESSIDADE, inicio, fim);
+        BigDecimal desejos = transacaoRepository
+                .somarPorGrupoEPeriodo(usuarioId, TipoTransacao.DESPESA, GrupoCategoria.DESEJO, inicio, fim);
         BigDecimal poupanca = renda.subtract(totalDespesas);
 
         IndicadorGrupo indicadorNecessidades =

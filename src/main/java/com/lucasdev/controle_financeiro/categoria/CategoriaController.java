@@ -2,6 +2,8 @@ package com.lucasdev.controle_financeiro.categoria;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,23 +20,30 @@ public class CategoriaController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CategoriaResponse criar(@Valid @RequestBody CategoriaRequest request){
-        return service.criar(request);
+    public CategoriaResponse criar(@Valid @RequestBody CategoriaRequest request,
+                                   @AuthenticationPrincipal Jwt jwt) {
+        return service.criar(request, usuarioId(jwt));
     }
 
     @GetMapping
-    public List<CategoriaResponse> listar(){
-        return service.listarTodas();
+    public List<CategoriaResponse> listar(@AuthenticationPrincipal Jwt jwt) {
+        return service.listarTodas(usuarioId(jwt));
     }
 
     @PutMapping("/{id}")
-    public CategoriaResponse atualizar(@PathVariable Long id, @Valid @RequestBody CategoriaRequest request){
-        return service.atualizar(id, request);
+    public CategoriaResponse atualizar(@PathVariable Long id,
+                                       @Valid @RequestBody CategoriaRequest request,
+                                       @AuthenticationPrincipal Jwt jwt) {
+        return service.atualizar(id, request, usuarioId(jwt));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void excluir(@PathVariable Long id){
-        service.excluir(id);
+    public void excluir(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        service.excluir(id, usuarioId(jwt));
+    }
+
+    private Long usuarioId(Jwt jwt) {
+        return Long.valueOf(jwt.getSubject());
     }
 }

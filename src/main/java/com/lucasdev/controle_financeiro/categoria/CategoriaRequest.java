@@ -1,4 +1,5 @@
 package com.lucasdev.controle_financeiro.categoria;
+import com.lucasdev.controle_financeiro.usuario.Usuario;
 import jakarta.validation.constraints.*;
 
 public record CategoriaRequest(
@@ -10,8 +11,8 @@ public record CategoriaRequest(
         @NotNull(message = "O grupo é obrigatório")
         GrupoCategoria grupo
 ) {
-    public Categoria toEntity() {
-        return new Categoria(nome, grupo);
+    public Categoria toEntity(Usuario usuario) {
+        return new Categoria(nome, grupo, usuario);
     }
 }
 

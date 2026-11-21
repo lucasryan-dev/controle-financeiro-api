@@ -2,6 +2,7 @@ package com.lucasdev.controle_financeiro.transacao;
 
 
 import com.lucasdev.controle_financeiro.categoria.Categoria;
+import com.lucasdev.controle_financeiro.usuario.Usuario;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,4 +31,7 @@ public class Transacao {
     private Categoria categoria;
     @Column(nullable = false)
     private LocalDate data;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
 }
