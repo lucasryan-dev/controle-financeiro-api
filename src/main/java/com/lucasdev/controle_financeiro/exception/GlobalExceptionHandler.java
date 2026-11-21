@@ -62,4 +62,10 @@ public class GlobalExceptionHandler {
     public ErroResponse tratarParametroInvalido(Exception ex){
         return new ErroResponse(400, "Parâmetro inválido ou ausente na requisição");
     }
+
+    @ExceptionHandler(CredenciaisInvalidasException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErroResponse tratarCredenciaisInvalidas(CredenciaisInvalidasException ex){
+        return new ErroResponse(401, ex.getMessage());
+    }
 }
