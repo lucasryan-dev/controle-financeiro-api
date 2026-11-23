@@ -11,6 +11,7 @@ API REST para controle de finanças pessoais, desenvolvida com **Java e Spring B
 - **Spring Web**: API REST
 - **Spring Data JPA / Hibernate**: persistência de dados
 - **PostgreSQL**: banco de dados relacional
+- **Flyway**: versionamento do banco de dados com migrations
 - **Spring Security e OAuth2 Resource Server**: autenticação com JWT
 - **Bean Validation**: validação dos dados de entrada
 - **Lombok**: redução de código repetitivo
@@ -122,6 +123,7 @@ Na raiz do projeto ficam também o `Dockerfile` (imagem da aplicação), o `dock
 - **Docker com multi-stage build**: a imagem é montada em duas etapas. A primeira compila o projeto com Maven e o JDK completo; a segunda roda só o `.jar` sobre uma imagem com o JRE, menor e com menos coisas instaladas. O `pom.xml` é copiado antes do código para aproveitar o cache do Docker e não baixar as dependências a cada mudança.
 - **Docker Compose com healthcheck e volume**: a API só sobe depois que o PostgreSQL responde ao `pg_isready`, e os dados ficam em um volume, sobrevivendo à remoção dos containers. Dentro da rede do Compose, a API encontra o banco pelo nome do serviço (`db`).
 - **Documentação gerada a partir do código**: o springdoc lê os controllers, os DTOs e as anotações de validação e monta a especificação OpenAPI sozinho, então a documentação nunca fica desatualizada em relação à API. O esquema de segurança Bearer/JWT foi declarado uma vez, e o Swagger UI envia o token em todas as requisições.
+- **Banco versionado com Flyway**: as tabelas são criadas por migrations SQL numeradas (`src/main/resources/db/migration`), que o Flyway executa em ordem ao iniciar a aplicação e registra na tabela `flyway_schema_history`. Cada mudança no banco vira uma nova migration, com histórico no Git, e migrations já aplicadas nunca são editadas. O Hibernate fica em modo `validate`: não cria nem altera tabelas, só confere se as entidades batem com o banco, e a aplicação não sobe se houver divergência.
 - **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais e a chave do JWT podem ser definidas por variáveis de ambiente, para que segredos reais nunca fiquem no código.
 
 ## 📖 Documentação interativa (Swagger)
@@ -410,7 +412,7 @@ Todos os erros seguem o mesmo formato:
 
 **Parâmetro da URL inválido ou ausente** `400 Bad Request`
 
-Por exemplo, `GET /relatorios/resumo?ano=2026&mes=13`, sem o `mes` ou com `mes=abc`:
+Por exemplo, `GET /relatorios/resumo?ano=2026&mes=13`, sem o `mes`, com `mes=abc` ou uma ordenação por campo inexistente (`GET /transacoes?sort=banana,desc`):
 ```json
 {
   "status": 400,
@@ -513,7 +515,7 @@ CREATE DATABASE controle_financeiro OWNER financeiro;
 \q
 ```
 
-As tabelas são criadas automaticamente pela aplicação na primeira execução.
+As tabelas são criadas automaticamente pelo Flyway na primeira execução, a partir das migrations em `src/main/resources/db/migration`.
 
 **2. Rodar a aplicação**
 
@@ -608,7 +610,7 @@ Os testes unitários cobrem as regras de negócio dos relatórios, das categoria
 - [ ] Testes dos endpoints (MockMvc)
 - [x] Documentação com Swagger/OpenAPI
 - [x] Banco de dados PostgreSQL
-- [ ] Migrations com Flyway
+- [x] Migrations com Flyway
 - [x] Docker e Docker Compose
 - [x] Autenticação com JWT (Spring Security), com cadastro e login
 - [x] Dados isolados por usuário, incluindo categorias próprias
