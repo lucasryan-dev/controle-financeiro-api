@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(TransacaoController.class)
 @Import(SecurityConfig.class)
-class TransacaoControllerTest {
+public class TransacaoControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -99,5 +99,4 @@ class TransacaoControllerTest {
 
         verify(service, never()).criar(any(), any());
     }
-
 }
