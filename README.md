@@ -2,6 +2,14 @@
 
 API REST para controle de finanças pessoais, desenvolvida com **Java e Spring Boot**. Cada usuário cria sua conta, faz login com JWT e, com acesso apenas aos próprios dados, registra receitas e despesas, organiza os gastos em categorias, acompanha relatórios do mês e recebe **dicas para melhorar sua saúde financeira**, baseadas na regra 50/30/20.
 
+## 🌐 API no ar
+
+**Teste agora pelo navegador:** [controle-financeiro-api-uq3h.onrender.com/swagger-ui.html](https://controle-financeiro-api-uq3h.onrender.com/swagger-ui.html)
+
+Crie uma conta em `POST /auth/registro`, faça login em `POST /auth/login` e cole o token no botão **Authorize** para testar todos os endpoints.
+
+> ⏳ A API está hospedada no plano gratuito do Render e "dorme" depois de 15 minutos sem uso. O primeiro acesso pode levar cerca de um minuto; depois disso, as respostas são rápidas.
+
 > 🚧 **Projeto em desenvolvimento.** Estou construindo esta API em etapas para estudar e praticar desenvolvimento back-end. Acompanhe a evolução no [roadmap](#️-roadmap) e no histórico de commits.
 
 ## 🛠️ Tecnologias
@@ -19,6 +27,7 @@ API REST para controle de finanças pessoais, desenvolvida com **Java e Spring B
 - **Maven**: gerenciamento de dependências
 - **Docker e Docker Compose**: containerização da aplicação e do banco
 - **springdoc-openapi (Swagger UI)**: documentação interativa da API
+- **Render e Neon**: deploy da API (container Docker) e banco PostgreSQL gerenciado na nuvem
 
 ## 📐 Arquitetura
 
@@ -124,6 +133,7 @@ Na raiz do projeto ficam também o `Dockerfile` (imagem da aplicação), o `dock
 - **Docker Compose com healthcheck e volume**: a API só sobe depois que o PostgreSQL responde ao `pg_isready`, e os dados ficam em um volume, sobrevivendo à remoção dos containers. Dentro da rede do Compose, a API encontra o banco pelo nome do serviço (`db`).
 - **Documentação gerada a partir do código**: o springdoc lê os controllers, os DTOs e as anotações de validação e monta a especificação OpenAPI sozinho, então a documentação nunca fica desatualizada em relação à API. O esquema de segurança Bearer/JWT foi declarado uma vez, e o Swagger UI envia o token em todas as requisições.
 - **Banco versionado com Flyway**: as tabelas são criadas por migrations SQL numeradas (`src/main/resources/db/migration`), que o Flyway executa em ordem ao iniciar a aplicação e registra na tabela `flyway_schema_history`. Cada mudança no banco vira uma nova migration, com histórico no Git, e migrations já aplicadas nunca são editadas. O Hibernate fica em modo `validate`: não cria nem altera tabelas, só confere se as entidades batem com o banco, e a aplicação não sobe se houver divergência.
+- **Deploy com Docker no Render e banco no Neon**: o Render constrói a imagem a partir do mesmo `Dockerfile` usado localmente, a cada push na branch `main`. O banco fica no Neon, com conexão criptografada (`sslmode=require`), e o Flyway cria as tabelas na primeira subida. Credenciais e a chave do JWT ficam só nas variáveis de ambiente do serviço. A porta vem da variável `PORT` definida pela plataforma, e `forward-headers-strategy` faz a aplicação reconhecer o HTTPS do proxy, para o Swagger funcionar corretamente.
 - **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais e a chave do JWT podem ser definidas por variáveis de ambiente, para que segredos reais nunca fiquem no código.
 
 ## 📖 Documentação interativa (Swagger)
@@ -658,6 +668,7 @@ Os testes são divididos em duas camadas:
 - [x] Banco de dados PostgreSQL
 - [x] Migrations com Flyway
 - [x] Docker e Docker Compose
+- [x] Deploy na nuvem (Render + Neon), com a documentação pública no Swagger
 - [x] Autenticação com JWT (Spring Security), com cadastro e login
 - [x] Dados isolados por usuário, incluindo categorias próprias
 - [ ] Dicas personalizadas com IA (Spring AI), usando as regras atuais como base e sem enviar dados pessoais
