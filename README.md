@@ -17,6 +17,7 @@ API REST para controle de finanças pessoais, desenvolvida com **Java e Spring B
 - **JUnit 5, Mockito e AssertJ**: testes automatizados
 - **Maven**: gerenciamento de dependências
 - **Docker e Docker Compose**: containerização da aplicação e do banco
+- **springdoc-openapi (Swagger UI)**: documentação interativa da API
 
 ## 📐 Arquitetura
 
@@ -120,7 +121,25 @@ Na raiz do projeto ficam também o `Dockerfile` (imagem da aplicação), o `dock
 - **Testes unitários com mocks**: as regras de negócio dos relatórios, das dicas, das categorias e das transações são testadas sem banco de dados, com os repositórios substituídos por mocks do Mockito. Nos cenários de erro, os testes verificam também que nada foi salvo ou apagado (`verify(..., never())`). Os testes rodam em milissegundos e cobrem os casos de borda, como meses sem receitas e poupança negativa. Valores `BigDecimal` são comparados com `isEqualByComparingTo`, que ignora diferenças de escala.
 - **Docker com multi-stage build**: a imagem é montada em duas etapas. A primeira compila o projeto com Maven e o JDK completo; a segunda roda só o `.jar` sobre uma imagem com o JRE, menor e com menos coisas instaladas. O `pom.xml` é copiado antes do código para aproveitar o cache do Docker e não baixar as dependências a cada mudança.
 - **Docker Compose com healthcheck e volume**: a API só sobe depois que o PostgreSQL responde ao `pg_isready`, e os dados ficam em um volume, sobrevivendo à remoção dos containers. Dentro da rede do Compose, a API encontra o banco pelo nome do serviço (`db`).
+- **Documentação gerada a partir do código**: o springdoc lê os controllers, os DTOs e as anotações de validação e monta a especificação OpenAPI sozinho, então a documentação nunca fica desatualizada em relação à API. O esquema de segurança Bearer/JWT foi declarado uma vez, e o Swagger UI envia o token em todas as requisições.
 - **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais e a chave do JWT podem ser definidas por variáveis de ambiente, para que segredos reais nunca fiquem no código.
+
+## 📖 Documentação interativa (Swagger)
+
+Com a aplicação rodando, a documentação completa fica em:
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+Ela é gerada automaticamente a partir dos controllers e DTOs, e permite testar todos os endpoints pelo navegador, sem Postman:
+
+1. Em **`POST /auth/login`**, clique em **Try it out**, informe e-mail e senha e execute.
+2. Copie o `token` da resposta.
+3. Clique em **Authorize** 🔓 no topo da página e cole o token (sem a palavra `Bearer`).
+4. Pronto: as próximas requisições já vão autenticadas.
+
+A especificação OpenAPI em JSON fica em `http://localhost:8080/v3/api-docs`. A documentação é pública, mas os endpoints continuam exigindo token.
 
 ## 📌 Endpoints
 
@@ -477,6 +496,8 @@ docker compose down      # para os containers e mantém os dados
 docker compose down -v   # para os containers e apaga os dados
 ```
 
+Com tudo no ar, abra **http://localhost:8080/swagger-ui.html** para explorar e testar a API.
+
 ### Opção 2: sem Docker
 
 **Pré-requisitos:** Java 21+, Git e PostgreSQL. O Maven não precisa estar instalado, porque o projeto usa o Maven Wrapper.
@@ -585,7 +606,7 @@ Os testes unitários cobrem as regras de negócio dos relatórios, das categoria
 - [x] Testes unitários das regras de categorias
 - [x] Testes unitários das regras de transações
 - [ ] Testes dos endpoints (MockMvc)
-- [ ] Documentação com Swagger/OpenAPI
+- [x] Documentação com Swagger/OpenAPI
 - [x] Banco de dados PostgreSQL
 - [ ] Migrations com Flyway
 - [x] Docker e Docker Compose
