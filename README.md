@@ -15,7 +15,7 @@ API REST para controle de finanças pessoais, desenvolvida com **Java e Spring B
 - **Spring Security e OAuth2 Resource Server**: autenticação com JWT
 - **Bean Validation**: validação dos dados de entrada
 - **Lombok**: redução de código repetitivo
-- **JUnit 5, Mockito e AssertJ**: testes automatizados
+- **JUnit 5, Mockito, AssertJ e MockMvc**: testes automatizados
 - **Maven**: gerenciamento de dependências
 - **Docker e Docker Compose**: containerização da aplicação e do banco
 - **springdoc-openapi (Swagger UI)**: documentação interativa da API
@@ -555,7 +555,12 @@ Os valores padrão servem para desenvolvimento local. No Docker Compose, a aplic
 mvnw.cmd test
 ```
 
-Os testes unitários cobrem as regras de negócio dos relatórios, das categorias e das transações:
+Os testes são divididos em duas camadas:
+
+- **Testes unitários** das services, com JUnit 5, Mockito e AssertJ: cobrem as regras de negócio com os repositórios substituídos por mocks.
+- **Testes da camada web** com `@WebMvcTest` e MockMvc: simulam requisições HTTP sem subir o servidor nem o banco, e verificam segurança, validação, status HTTP e o JSON das respostas.
+
+### Testes unitários (services)
 
 **Relatórios e dicas**
 
@@ -587,6 +592,26 @@ Os testes unitários cobrem as regras de negócio dos relatórios, das categoria
 | Buscar transação inexistente | a API responde `404` |
 | Atualizar | os dados mudam, mas o id da transação é mantido |
 
+### Testes da camada web (MockMvc)
+
+**Endpoints de categorias**
+
+| Cenário testado | Garante que |
+|---|---|
+| Requisição sem token | a API responde `401` antes de chegar ao controller |
+| Listar com token | a API responde `200` com as categorias do usuário identificado no token |
+| Nome vazio | a API responde `400` com o campo inválido e a service nunca é chamada |
+| Nome repetido | a `ConflitoException` vira `409` com a mensagem de erro |
+
+**Endpoints de transações**
+
+| Cenário testado | Garante que |
+|---|---|
+| Requisição sem token | a API responde `401` antes de chegar ao controller |
+| Criar transação | a API responde `201` com a transação e a categoria completa no JSON |
+| Buscar transação inexistente | a `RecursoNaoEncontradoException` vira `404`, usando o id da URL e o usuário do token |
+| Valor negativo | a API responde `400` com o campo `valor` e a service nunca é chamada |
+
 > O teste `contextLoads`, gerado pelo Spring Initializr, sobe a aplicação completa e precisa do PostgreSQL rodando.
 
 ## 🗺️ Roadmap
@@ -607,7 +632,8 @@ Os testes unitários cobrem as regras de negócio dos relatórios, das categoria
 - [x] Testes unitários dos relatórios e das dicas (JUnit, Mockito e AssertJ)
 - [x] Testes unitários das regras de categorias
 - [x] Testes unitários das regras de transações
-- [ ] Testes dos endpoints (MockMvc)
+- [x] Testes dos endpoints de categorias e transações (MockMvc)
+- [ ] Testes dos endpoints de relatórios e autenticação (MockMvc)
 - [x] Documentação com Swagger/OpenAPI
 - [x] Banco de dados PostgreSQL
 - [x] Migrations com Flyway
