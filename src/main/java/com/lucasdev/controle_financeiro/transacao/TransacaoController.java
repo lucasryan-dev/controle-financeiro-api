@@ -3,6 +3,7 @@ package com.lucasdev.controle_financeiro.transacao;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -40,7 +41,7 @@ public class TransacaoController {
             @RequestParam(required = false) Long categoriaId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
-            @PageableDefault(size = 20, sort = "data", direction = Sort.Direction.DESC) Pageable pageable,
+            @ParameterObject @PageableDefault(size = 20, sort = "data", direction = Sort.Direction.DESC) Pageable pageable,
             @AuthenticationPrincipal Jwt jwt) {
         return new PagedModel<>(service.listar(tipo, categoriaId, inicio, fim, usuarioId(jwt), pageable));
     }

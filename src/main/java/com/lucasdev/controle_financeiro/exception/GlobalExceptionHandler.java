@@ -1,6 +1,7 @@
 package com.lucasdev.controle_financeiro.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -57,7 +58,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({DateTimeException.class,
                         MissingServletRequestParameterException.class,
-                            MethodArgumentTypeMismatchException.class})
+                            MethodArgumentTypeMismatchException.class,
+                                InvalidDataAccessApiUsageException.class
+    })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErroResponse tratarParametroInvalido(Exception ex){
         return new ErroResponse(400, "Parâmetro inválido ou ausente na requisição");
@@ -68,4 +71,5 @@ public class GlobalExceptionHandler {
     public ErroResponse tratarCredenciaisInvalidas(CredenciaisInvalidasException ex){
         return new ErroResponse(401, ex.getMessage());
     }
+
 }
