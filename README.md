@@ -1,6 +1,6 @@
-# 💰 Controle Financeiro API
+# 💰 FinEquilibra API
 
-API REST para controle de finanças pessoais, desenvolvida com **Java e Spring Boot**. Cada usuário cria sua conta, faz login com JWT e, com acesso apenas aos próprios dados, registra receitas e despesas, organiza os gastos em categorias, acompanha relatórios do mês e recebe **dicas para melhorar sua saúde financeira**, baseadas na regra 50/30/20.
+**FinEquilibra** é uma API REST para controle de finanças pessoais, desenvolvida com **Java e Spring Boot**. Cada usuário cria sua conta, faz login com JWT e, com acesso apenas aos próprios dados, registra receitas e despesas, organiza os gastos em categorias, acompanha relatórios do mês e recebe **dicas para melhorar sua saúde financeira**, baseadas na regra 50/30/20.
 
 ## 🌐 API no ar
 
