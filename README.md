@@ -134,6 +134,7 @@ Na raiz do projeto ficam também o `Dockerfile` (imagem da aplicação), o `dock
 - **Documentação gerada a partir do código**: o springdoc lê os controllers, os DTOs e as anotações de validação e monta a especificação OpenAPI sozinho, então a documentação nunca fica desatualizada em relação à API. O esquema de segurança Bearer/JWT foi declarado uma vez, e o Swagger UI envia o token em todas as requisições.
 - **Banco versionado com Flyway**: as tabelas são criadas por migrations SQL numeradas (`src/main/resources/db/migration`), que o Flyway executa em ordem ao iniciar a aplicação e registra na tabela `flyway_schema_history`. Cada mudança no banco vira uma nova migration, com histórico no Git, e migrations já aplicadas nunca são editadas. O Hibernate fica em modo `validate`: não cria nem altera tabelas, só confere se as entidades batem com o banco, e a aplicação não sobe se houver divergência.
 - **Deploy com Docker no Render e banco no Neon**: o Render constrói a imagem a partir do mesmo `Dockerfile` usado localmente, a cada push na branch `main`. O banco fica no Neon, com conexão criptografada (`sslmode=require`), e o Flyway cria as tabelas na primeira subida. Credenciais e a chave do JWT ficam só nas variáveis de ambiente do serviço. A porta vem da variável `PORT` definida pela plataforma, e `forward-headers-strategy` faz a aplicação reconhecer o HTTPS do proxy, para o Swagger funcionar corretamente.
+- **CORS com origens explícitas**: a API só aceita chamadas de navegador vindas das origens listadas em `CORS_ORIGENS`, em vez de liberar qualquer site com `*`. O Spring Security responde a requisição de preflight (`OPTIONS`) antes de exigir o token, e só os métodos e headers usados pela API são permitidos. Para liberar um novo front-end, basta configurar a variável de ambiente, sem mudar o código.
 - **PostgreSQL com usuário dedicado**: a aplicação acessa o banco com um usuário próprio, sem privilégios de administrador. As credenciais e a chave do JWT podem ser definidas por variáveis de ambiente, para que segredos reais nunca fiquem no código.
 
 ## 📖 Documentação interativa (Swagger)
@@ -552,6 +553,8 @@ A API sobe em `http://localhost:8080`. Use o Postman, o Insomnia ou outro client
 | `DB_USERNAME` | `financeiro` | usuário do banco |
 | `DB_PASSWORD` | `financeiro` | senha do banco |
 | `JWT_SECRET` | chave de desenvolvimento | chave que assina os tokens (mínimo de 32 caracteres) |
+| `CORS_ORIGENS` | `http://127.0.0.1:5500,http://localhost:5500` | sites que podem chamar a API pelo navegador, separados por vírgula |
+| `PORT` | `8080` | porta da aplicação (definida automaticamente pelo Render) |
 
 Os valores padrão servem para desenvolvimento local. No Docker Compose, a aplicação usa `DB_URL` apontando para o serviço `db`. Em produção, defina as variáveis com credenciais seguras, principalmente a `JWT_SECRET`: quem tem a chave consegue gerar tokens válidos.
 

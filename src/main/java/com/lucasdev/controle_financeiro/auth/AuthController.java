@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @SecurityRequirements
@@ -28,7 +27,7 @@ public class AuthController {
 
     @Operation(summary = "Faz login e devolve o token JWT")
     @PostMapping("/login")
-       public TokenResponse login(@Valid @RequestBody LoginRequest request){
+       public TokenResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
     }
     }
